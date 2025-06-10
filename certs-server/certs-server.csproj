@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CertsServer</RootNamespace>
+    <UserSecretsId>4a91da73-8aa4-4a4f-bb0e-3d2eda726e6f</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AgileConfig.Client" />
+    <PackageReference Include="AlibabaCloud.SDK.Alidns20150109" />
+    <PackageReference Include="LettuceEncrypt" />
+    <PackageReference Include="LettuceEncrypt.Extensions.AliDns" />
+    <PackageReference Include="Mapster" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="NSwag.AspNetCore" />
+  </ItemGroup>
+
+</Project>

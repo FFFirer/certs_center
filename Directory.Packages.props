@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <!-- Enable central package management, https://learn.microsoft.com/en-us/nuget/consume-packages/Central-Package-Management -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageVersion Include="AgileConfig.Client" Version="1.7.6" />
+    <PackageVersion Include="AlibabaCloud.SDK.Alidns20150109" Version="3.5.9" />
+    <PackageVersion Include="LettuceEncrypt" Version="1.3.3" />
+    <PackageVersion Include="LettuceEncrypt.Extensions.AliDns" Version="1.0.1" />
+    <PackageVersion Include="Mapster" Version="7.4.2-pre02" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0-preview.5.25277.114" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.0-preview.5.25277.114" />
+    <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1-Preview.1" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0-preview.3" />
+    <PackageVersion Include="NSwag.AspNetCore" Version="14.4.0" />
+  </ItemGroup>
+</Project>
