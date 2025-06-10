@@ -18,6 +18,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "files", "files", "{909EE455
 		nuget.config = nuget.config
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0403A38A-DE96-4F2A-A7BD-CE2DF88D9E04}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "acme", "acme\acme.csproj", "{722F64C5-8252-4875-B936-256DA92DEDAC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,6 +40,10 @@ Global
 		{6BA61B9A-FD9D-4625-9267-CC608B9AF341}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6BA61B9A-FD9D-4625-9267-CC608B9AF341}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6BA61B9A-FD9D-4625-9267-CC608B9AF341}.Release|Any CPU.Build.0 = Release|Any CPU
+		{722F64C5-8252-4875-B936-256DA92DEDAC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{722F64C5-8252-4875-B936-256DA92DEDAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{722F64C5-8252-4875-B936-256DA92DEDAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{722F64C5-8252-4875-B936-256DA92DEDAC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

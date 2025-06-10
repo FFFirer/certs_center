@@ -16,5 +16,6 @@
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1-Preview.1" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0-preview.3" />
     <PackageVersion Include="NSwag.AspNetCore" Version="14.4.0" />
+    <PackageVersion Include="Quartz.AspNetCore" Version="3.14.0" />
   </ItemGroup>
 </Project>

@@ -1,12 +1,12 @@
+using AgileConfig.Client;
 using CertsServer;
-using LettuceEncrypt;
 using LettuceEncrypt.Extensions.AliDns;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddEnvironmentVariables("CERTS_");
+builder.Configuration.AddAgileConfig((ConfigClientOptions options) => builder.Configuration.GetSection("AgileConfig")?.Bind(options));
 
 builder.Services.AddOpenApiDocument().AddEndpointsApiExplorer().AddCors();
 
