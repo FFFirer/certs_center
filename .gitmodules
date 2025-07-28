@@ -1,0 +1,3 @@
+[submodule "eventbus"]
+	path = eventbus
+	url = http://10.8.0.18:3000/0sdf0/idev_events.git
