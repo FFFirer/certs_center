@@ -9,4 +9,12 @@
         <AssemblyName>CertsServer.Acme</AssemblyName>
     </PropertyGroup>
 
+    <ItemGroup>
+        <PackageReference Include="ACMESharpCore" />
+        <PackageReference Include="DnsClient" />
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="PKISharp.SimplePKI" />
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
 </Project>
