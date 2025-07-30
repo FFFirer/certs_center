@@ -15,7 +15,9 @@
   <Folder Name="/migrations/">
     <Project Path="sqlite-migrations/sqlite-migrations.csproj" />
   </Folder>
-  <Folder Name="/tests/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/acme.tests/acme.tests.csproj" />
+  </Folder>
   <Project Path="acme/acme.csproj" />
   <Project Path="certs-server/certs-server.csproj" />
   <Project Path="cli/cli.csproj" />
