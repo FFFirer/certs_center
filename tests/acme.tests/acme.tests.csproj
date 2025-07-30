@@ -11,14 +11,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AutoFixture.AutoMoq" />
     <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="Serilog.Sinks.XUnit" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="assets\" />
   </ItemGroup>
 
 </Project>
