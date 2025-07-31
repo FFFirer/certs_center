@@ -1,8 +1,11 @@
 using System;
+
 using ACMESharp.Crypto.JOSE;
 using ACMESharp.Protocol;
 using ACMESharp.Protocol.Resources;
+
 using CertsCenter.Acme;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -65,7 +68,7 @@ public class AcmeClientFactory : IDisposable
             accountKeyHash = AcmeHelper.ComputeHash(accountSigner.Export());
         }
 
-        var http = _factory.CreateClient(_options.Value.CaEndpoint);
+        var http = _factory.CreateClient(_options.Value.CaName);
         var acme = new AcmeProtocolClient(http, acmeDir, account, accountSigner, logger: _logger, usePostAsGet: true);
 
         if (acmeDir is null || refresh)
@@ -118,5 +121,34 @@ public class AcmeClientFactory : IDisposable
         // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    public async Task<Account> GetOrCreateAccountAsync(CancellationToken cancellationToken)
+    {
+        var acme = await CreateClient(false, cancellationToken);
+
+        if (acme.Account is not null)
+        {
+            return acme.Account.Payload;
+        }
+
+        if (_options.Value.Email.IsNullOrEmpty())
+        {
+            throw new ArgumentException("Email is required");
+        }
+
+        if (_options.Value.AcceptTermOfService == false)
+        {
+            throw new ArgumentException("Accept of teamservice is required");
+        }
+
+        var account = await acme.CreateAccountAsync(_options.Value.Email.Select(x => $"mailto:{x}"), _options.Value.AcceptTermOfService, cancel: cancellationToken);
+        var accountSigner = acme.Signer;
+        var accountKey = new AccountKey(accountSigner.JwsAlg, accountSigner.Export());
+
+        await _store.SaveAsync(account, AcmeStoreKeys.AcmeAccountDetails, cancellationToken);
+        await _store.SaveAsync(accountKey, AcmeStoreKeys.AcmeAccountKey, cancellationToken);
+
+        return account.Payload;
     }
 }

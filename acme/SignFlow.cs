@@ -2,15 +2,20 @@ using System;
 using System.IO.Compression;
 using System.Reflection.Emit;
 using System.Security.Cryptography.X509Certificates;
+
 using ACMESharp;
 using ACMESharp.Authorizations;
 using ACMESharp.Protocol;
 using ACMESharp.Protocol.Resources;
+
 using CertsCenter.Acme;
+
 using DnsClient.Protocol;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using PKISharp.SimplePKI;
 
 namespace CertsServer.Acme;
@@ -204,8 +209,16 @@ public class AcmeCertificateFactory
 
     public async Task<Account> GetOrCreateAccountAsync(CancellationToken cancellationToken)
     {
-        var acme = await _clientFactory.Create(cancellationToken: cancellationToken);
-        return acme.Account.Payload;
+        // var acme = await _clientFactory.Create(cancellationToken: cancellationToken);
+
+        // if (acme.Account is null)
+        // {
+
+        // }
+
+        // return acme.Account!.Payload;
+
+        return await _clientFactory.GetOrCreateAccountAsync(cancellationToken);
     }
 
     public async Task<X509Certificate2> CreateCertificateAsync(CertificateRequest request, CancellationToken cancellationToken)
@@ -235,6 +248,7 @@ public class AcmeCertificateFactory
         order = await acme.FinalizeOrderAsync(order.Payload.Finalize, certCsr, cancellationToken);
 
         var testUtil = DateTime.Now.Add(TimeSpan.FromMinutes(10));
+
         while (!cancellationToken.IsCancellationRequested && DateTime.Now < testUtil)
         {
             switch (order.Payload.Status)
@@ -249,11 +263,13 @@ public class AcmeCertificateFactory
                 default:
                     if (DateTime.Now < testUtil)
                     {
-                        _logger.LogDebug("Wait for check order status ...5s");
+                        _logger.LogDebug("Wait for check order status ...5s Current {Status}", order.Payload.Status);
                         await Task.Delay(TimeSpan.FromSeconds(5));
+                        order = await acme.GetOrderDetailsAsync(order.OrderUrl, order, cancellationToken);
                     }
                     break;
             }
+
         }
 
         return await ExportPfx(acme, order, keyPair, request.PfxPassword, cancellationToken);
@@ -468,6 +484,12 @@ public class AcmeCertificateFactory
                     }
                     break;
             }
+
+            if (DateTime.Now < testUtil)
+            {
+                await Task.Delay(5 * 1000);
+                _logger.LogInformation("Waiting for challenge result ...5s");
+            }
         }
     }
 
@@ -509,14 +531,14 @@ public class AcmeCertificateFactory
 
             try
             {
-                var lookup = await DnsUtil.LookupRecordAsync("TXT", context.Txt, cancellationToken);
+                var lookup = await DnsUtil.LookupRecordAsync("TXT", context.Domain, cancellationToken);
                 var dnsValues = lookup?.Select(x => x.Trim('"'));
 
                 if (dnsValues.IsNullOrEmpty())
                 {
                     err = "Could not resolve *any* DNS entries for Challenge record name";
                 }
-                else if (dnsValues.Contains(context.Domain) == false)
+                else if (dnsValues.Contains(context.Txt) == false)
                 {
                     var dnsValuesFlattened = string.Join(",", dnsValues);
                     err = $"DNS entry does not match expected value for Challenge record name ({context.Domain} not in {dnsValuesFlattened})";

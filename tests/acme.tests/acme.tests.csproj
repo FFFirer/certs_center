@@ -8,6 +8,7 @@
 
     <RootNamespace>CertsServer.Acme.Tests</RootNamespace>
     <AssemblyName>CertsServer.Acme.Tests</AssemblyName>
+    <UserSecretsId>5be23d08-54c4-488c-acff-cca75c11ef03</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +28,10 @@
 
   <ItemGroup>
     <Folder Include="assets\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\acme\acme.csproj" />
   </ItemGroup>
 
 </Project>

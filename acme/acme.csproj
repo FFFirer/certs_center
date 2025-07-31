@@ -14,6 +14,7 @@
         <PackageReference Include="DnsClient" />
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="PKISharp.SimplePKI" />
+        <PackageReference Include="AlibabaCloud.SDK.Alidns20150109" />
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>
 

@@ -3,7 +3,7 @@ namespace CertsServer.Acme;
 
 public record CaOptions(string Name, string Endpoint);
 
-public static class CaConsts
+public static class CaConst
 {
     public static CaOptions LetsEncrypt = new CaOptions(nameof(LetsEncrypt), "https://acme-v02.api.letsencrypt.org/");
     public static CaOptions LetsEncryptStaging = new CaOptions(nameof(LetsEncryptStaging), "https://acme-staging-v02.api.letsencrypt.org/");
