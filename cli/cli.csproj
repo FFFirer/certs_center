@@ -10,12 +10,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="CommandLineParser" />
+        <PackageReference Include="System.CommandLine" />    
         <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\certs-server\certs-server.csproj" />
-      <ProjectReference Include="..\Migrations\Migrations.csproj" />
+      <ProjectReference Include="..\sqlite-migrations\sqlite-migrations.csproj" />
     </ItemGroup>
 
 </Project>

@@ -31,6 +31,8 @@
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.1-dev-00953" />
     <PackageVersion Include="Serilog.Sinks.OpenTelemetry" Version="4.2.1-dev-02306" />
     <PackageVersion Include="Serilog.Sinks.XUnit" Version="3.0.19" />
+    <PackageVersion Include="CommandLineParser" Version="2.9.1" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta6.25358.103" />
   </ItemGroup>
   <ItemGroup>
     <!-- xunit -->
