@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace CertsServer.Migrations
 {
-    [DbContext(typeof(CertDbContext))]
+    [DbContext(typeof(CertsServerDbContext))]
     [Migration("20250610031607_Init")]
     partial class Init
     {

@@ -3,16 +3,16 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace CertsServer;
 
-public class CertDbContextDesignTimeFactory : IDesignTimeDbContextFactory<CertDbContext>
+public class CertDbContextDesignTimeFactory : IDesignTimeDbContextFactory<CertsServerDbContext>
 {
-    public CertDbContext CreateDbContext(string[] args)
+    public CertsServerDbContext CreateDbContext(string[] args)
     {
-        var optionsBuilder = new DbContextOptionsBuilder<CertDbContext>();
+        var optionsBuilder = new DbContextOptionsBuilder<CertsServerDbContext>();
         optionsBuilder.UseSqlite("Data Source=certs.db", sqlite =>
         {
             sqlite.MigrationsAssembly("CertsServer.Migrations.Sqlite");
         });
 
-        return new CertDbContext(optionsBuilder.Options);
+        return new CertsServerDbContext(optionsBuilder.Options);
     }
 }

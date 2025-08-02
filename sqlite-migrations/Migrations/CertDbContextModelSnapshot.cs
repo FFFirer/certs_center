@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace CertsServer.Migrations
 {
-    [DbContext(typeof(CertDbContext))]
+    [DbContext(typeof(CertsServerDbContext))]
     partial class CertDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

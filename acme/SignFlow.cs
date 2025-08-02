@@ -13,6 +13,7 @@ using CertsCenter.Acme;
 using DnsClient.Protocol;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -170,19 +171,46 @@ public class BeginCertificateCreation : SignFlowState
 
 public class X509StoreCertificateStore : ICertificateStore
 {
-    public ValueTask SaveAsync(X509Certificate2 certificate, CancellationToken cancellationToken)
+    public Task<X509Certificate2?> FindAsync(string path, CancellationToken cancellationToken)
     {
-        using var x509store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+        using var x509store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+
+        x509store.Open(OpenFlags.ReadOnly);
+        var cert = x509store.Certificates.Where(x => x.Thumbprint == path).FirstOrDefault();
+
+        x509store.Close();
+        return Task.FromResult(cert);
+    }
+
+    public Task<string> SaveAsync(X509Certificate2 certificate, CancellationToken cancellationToken)
+    {
+        using var x509store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+
+        x509store.Open(OpenFlags.ReadWrite);
 
         x509store.Add(certificate);
 
-        return ValueTask.CompletedTask;
+        x509store.Close();
+
+        return Task.FromResult(certificate.Thumbprint);
     }
+
+
 }
 
 public interface ICertificateStore
 {
-    ValueTask SaveAsync(X509Certificate2 certificate, CancellationToken cancellationToken);
+    Task<X509Certificate2?> FindAsync(string path, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="certificate"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>
+    /// path
+    /// </returns>
+    Task<string> SaveAsync(X509Certificate2 certificate, CancellationToken cancellationToken);
 }
 
 public interface IDnsChallengeProvider
@@ -196,12 +224,15 @@ public class AcmeCertificateFactory
     private readonly ILogger _logger;
     private readonly AcmeClientFactory _clientFactory;
     private readonly IDnsChallengeProvider _dnsChallengeProvider;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
     public AcmeCertificateFactory(
         IDnsChallengeProvider dnsChallengeProvider,
+        IServiceScopeFactory serviceScopeFactory,
         ILogger<AcmeCertificateFactory> logger,
         AcmeClientFactory clientFactory)
     {
+        _serviceScopeFactory = serviceScopeFactory;
         _dnsChallengeProvider = dnsChallengeProvider;
         _logger = logger;
         _clientFactory = clientFactory;
@@ -230,7 +261,7 @@ public class AcmeCertificateFactory
 
         var authUrls = order.Payload.Authorizations;
         cancellationToken.ThrowIfCancellationRequested();
-        await Task.WhenAll(BeginValidateAllAuthorizations(acme, authUrls, cancellationToken));
+        await Task.WhenAll(BeginValidateAllAuthorizations(authUrls, cancellationToken));
 
         cancellationToken.ThrowIfCancellationRequested();
         return await CompleteCertificateRequestAsync(order, request, cancellationToken);
@@ -238,6 +269,8 @@ public class AcmeCertificateFactory
 
     private async Task<X509Certificate2> CompleteCertificateRequestAsync(OrderDetails order, CertificateRequest request, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Completing order {Url}", order.OrderUrl);
+
         var acme = await _clientFactory.Create(cancellationToken: cancellationToken);
         // check all authorizations
         order = await acme.GetOrderDetailsAsync(order.OrderUrl, existing: order, cancellationToken);
@@ -247,32 +280,40 @@ public class AcmeCertificateFactory
 
         order = await acme.FinalizeOrderAsync(order.Payload.Finalize, certCsr, cancellationToken);
 
+        _logger.LogInformation("Has request to finalize order {Url}", order.OrderUrl);
+
         var testUtil = DateTime.Now.Add(TimeSpan.FromMinutes(10));
 
         while (!cancellationToken.IsCancellationRequested && DateTime.Now < testUtil)
         {
-            switch (order.Payload.Status)
+            if (order.Payload.Status == AcmeConst.ValidStatus)
             {
-                case AcmeConst.ValidStatus:
-                    SaveOrderWithPkiKeyPair(order, keyPair);
-                    break;
-
-                case AcmeConst.InvalidStatus:
-                    throw new Exception("Cannot generate certificate because order is " + order.Payload.Status);
-
-                default:
-                    if (DateTime.Now < testUtil)
-                    {
-                        _logger.LogDebug("Wait for check order status ...5s Current {Status}", order.Payload.Status);
-                        await Task.Delay(TimeSpan.FromSeconds(5));
-                        order = await acme.GetOrderDetailsAsync(order.OrderUrl, order, cancellationToken);
-                    }
-                    break;
+                _logger.LogInformation("Order {Url} is valid", order.OrderUrl);
+                SaveOrderWithPkiKeyPair(order, keyPair);
+                break;
             }
 
+            if (order.Payload.Status == AcmeConst.InvalidStatus)
+            {
+                _logger.LogWarning("Order is invalid, Details: {@Content}", order);
+                throw new Exception("Cannot generate certificate because order is " + order.Payload.Status);
+            }
+
+            if (DateTime.Now < testUtil)
+            {
+                _logger.LogDebug("Wait for check order {OrderUrl} status ...5s Current: {Status}", order.OrderUrl, order.Payload.Status);
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                order = await acme.GetOrderDetailsAsync(order.OrderUrl, order, cancellationToken);
+            }
         }
 
-        return await ExportPfx(acme, order, keyPair, request.PfxPassword, cancellationToken);
+        _logger.LogInformation("Completed order {Url}", order.OrderUrl);
+
+        var cert = await ExportPfx(acme, order, keyPair, request.PfxPassword, cancellationToken);
+
+        _logger.LogInformation("Exported order {Url}: PFX", order.OrderUrl);
+
+        return cert;
     }
 
     /// <summary>
@@ -400,11 +441,11 @@ public class AcmeCertificateFactory
         }
     }
 
-    private IEnumerable<Task> BeginValidateAllAuthorizations(AcmeProtocolClient acme, string[] authzDetailUrls, CancellationToken cancellationToken)
+    private IEnumerable<Task> BeginValidateAllAuthorizations(string[] authzDetailUrls, CancellationToken cancellationToken)
     {
         foreach (var authzDetailUrl in authzDetailUrls)
         {
-            yield return ValidateDomainOwnershipAsync(acme, authzDetailUrl, cancellationToken);
+            yield return ValidateDomainOwnershipAsync(authzDetailUrl, cancellationToken);
         }
     }
 
@@ -421,9 +462,14 @@ public class AcmeCertificateFactory
         return csr;
     }
 
-    private async Task ValidateDomainOwnershipAsync(AcmeProtocolClient acme, string authzDetailUrl, CancellationToken cancellationToken)
+    private async Task ValidateDomainOwnershipAsync(string authzDetailUrl, CancellationToken cancellationToken)
     {
+        using var scope = _serviceScopeFactory.CreateAsyncScope();
+
+        var acme = await (scope.ServiceProvider.GetRequiredService<AcmeClientFactory>()).Create(cancellationToken: cancellationToken);
         var authz = await acme.GetAuthorizationDetailsAsync(authzDetailUrl, cancellationToken);
+
+        _logger.LogInformation("Authz {Url} is {Status}", authzDetailUrl, authz.Status);
 
         if (authz.Status == AcmeConst.ValidStatus)
         {
@@ -432,29 +478,47 @@ public class AcmeCertificateFactory
 
         var domainName = authz.Identifier.Value;
 
-        var dnsChallenge = authz.Challenges.Where(x => x.Type.Equals("dns-01", StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+        var dnsChallenges = authz.Challenges.Where(x => x.Type.Equals("dns-01", StringComparison.OrdinalIgnoreCase)).ToList();
 
-        if (dnsChallenge is null)
-        {
-            _logger.LogInformation("No challenge for dns-01");
-            return;
-        }
+        _logger.LogInformation("Start validate {DomainNames} ownership for {Authz} with {Count} DNS-01 challenge", domainName, authzDetailUrl, dnsChallenges.Count);
 
-        var context = new DomainTxtRecordContext(domainName, string.Empty, string.Empty);
+        await Task.WhenAll(DoChallenges(dnsChallenges, authzDetailUrl, authz, domainName, cancellationToken));
+    }
 
-        try
+    private IEnumerable<Task> DoChallenges(IEnumerable<Challenge> dnsChallenges, string authzDetailUrl, Authorization authz, string domainName, CancellationToken cancellationToken)
+    {
+        foreach (var dnsChallenge in dnsChallenges)
         {
-            context = await PrepareDns01ChallengeResponseAsync(acme, authz, dnsChallenge, cancellationToken);
-            await WaitForChallengeResultAsync(acme, authzDetailUrl, dnsChallenge, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Challenge failed");
-            throw;
-        }
-        finally
-        {
-            await _dnsChallengeProvider.RemoveTxtRecordAsync(context, cancellationToken);
+            if (dnsChallenge is null)
+            {
+                _logger.LogInformation("No 'dns-01' challenge for {Authz}: ", authzDetailUrl);
+                continue;
+            }
+
+            yield return Task.Factory.StartNew(async () =>
+            {
+                _logger.LogInformation("Start challenge {Domain} using {ChallengeUrl} for {Authz} ", domainName, authzDetailUrl, dnsChallenge.Url);
+
+                using var scope = _serviceScopeFactory.CreateAsyncScope();
+                var acme = await (scope.ServiceProvider.GetRequiredService<AcmeClientFactory>()).Create(cancellationToken: cancellationToken);
+
+                var context = new DomainTxtRecordContext(domainName, string.Empty, string.Empty);
+
+                try
+                {
+                    context = await PrepareDns01ChallengeResponseAsync(acme, authz, dnsChallenge, cancellationToken);
+                    await WaitForChallengeResultAsync(acme, authzDetailUrl, dnsChallenge, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Challenge {Url} failed", dnsChallenge.Url);
+                    throw;
+                }
+                finally
+                {
+                    await _dnsChallengeProvider.RemoveTxtRecordAsync(context, cancellationToken);
+                }
+            }, cancellationToken);
         }
     }
 
@@ -467,28 +531,22 @@ public class AcmeCertificateFactory
         {
             var authzUpdated = await acme.GetAuthorizationDetailsAsync(authzDetailsUrl, cancellationToken);
 
-            switch (authzUpdated.Status)
+            if (authzUpdated.Status == AcmeConst.ValidStatus)
             {
-                case AcmeConst.ValidStatus:
-                    break;
+                _logger.LogInformation("Authz {Url} is valid", authzDetailsUrl);
+                break;
+            }
 
-                case AcmeConst.InvalidStatus:
-                    _logger.LogDebug("Current authz is {@Details}", authzUpdated);
-                    throw new Exception($"Authorization is invalid");
-
-                default:
-                    if (DateTime.Now < testUtil)
-                    {
-                        await Task.Delay(5 * 1000);
-                        _logger.LogInformation("Waiting for challenge result ...5s");
-                    }
-                    break;
+            if (authzUpdated.Status == AcmeConst.InvalidStatus)
+            {
+                _logger.LogDebug("Authz is invalid, Details: {@Content}", authzUpdated);
+                throw new Exception($"Authorization is invalid");
             }
 
             if (DateTime.Now < testUtil)
             {
+                _logger.LogInformation("Waiting for challenge {Challenge} result ...5s, Current is {Status}", dnsChallenge.Url, authzUpdated.Status);
                 await Task.Delay(5 * 1000);
-                _logger.LogInformation("Waiting for challenge result ...5s");
             }
         }
     }
@@ -546,7 +604,7 @@ public class AcmeCertificateFactory
                 else
                 {
                     err = null;
-                    _logger.LogInformation("Found expected DNS entry for Challenge record name: {@names}", dnsValues);
+                    _logger.LogInformation("Found expected DNS entry for Challenge {Name}: {Values}", context.Domain, dnsValues);
 
                     break;
                 }

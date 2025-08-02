@@ -13,12 +13,25 @@ public interface IAcmeState
     Task<IAcmeState> MoveNextAsync(CancellationToken cancellationToken);
 }
 
+public class StateTerminatedException : Exception
+{
+    public StateTerminatedException() : base()
+    {
+
+    }
+
+    public StateTerminatedException(string message) : base(message)
+    {
+        
+    }
+}
+
 public sealed class TerminalState : IAcmeState
 {
     public bool Completed => true;
     public Task<IAcmeState> MoveNextAsync(CancellationToken cancellationToken)
     {
-        throw new OperationCanceledException("State terminated");
+        throw new StateTerminatedException("State terminated");
     }
 }
 

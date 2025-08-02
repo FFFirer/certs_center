@@ -12,13 +12,8 @@ namespace CertsServer.Acme.Tests;
 
 public class SignFlowUnitTests
 {
-    private IServiceProvider BuildServiceProvider()
+    public static IServiceCollection ConfigureAcmeServices(IServiceCollection services, IConfiguration configuration)
     {
-        var configuration = new ConfigurationBuilder()
-            .AddUserSecrets("5be23d08-54c4-488c-acff-cca75c11ef03").Build();
-
-        var services = new ServiceCollection();
-
         services.AddLogging(logging =>
         {
             logging.SetMinimumLevel(LogLevel.Debug);
@@ -35,6 +30,18 @@ public class SignFlowUnitTests
             o.CaName = CaConst.LetsEncryptStaging.Name;
             o.AcceptTermOfService = true;
         });
+
+        return services;
+    }
+
+    public static IServiceProvider BuildServiceProvider()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddUserSecrets("5be23d08-54c4-488c-acff-cca75c11ef03").Build();
+
+        var services = new ServiceCollection();
+
+        ConfigureAcmeServices(services, configuration);
 
         return services.BuildServiceProvider();
     }

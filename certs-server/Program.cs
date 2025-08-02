@@ -17,7 +17,7 @@ builder.Services.AddLettuceEncrypt(options =>
 {
     options.AllowedChallengeTypes = LettuceEncrypt.Acme.ChallengeType.Dns01;
 }).AddAliDns();
-builder.Services.AddDbContext<CertDbContext>(options =>
+builder.Services.AddDbContext<CertsServerDbContext>(options =>
 {
     switch (builder.Configuration.GetSection("Db").Value)
     {

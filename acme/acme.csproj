@@ -7,7 +7,8 @@
 
         <RootNamespace>CertsServer.Acme</RootNamespace>
         <AssemblyName>CertsServer.Acme</AssemblyName>
-    </PropertyGroup>
+      <UserSecretsId>44901e4d-67dc-4f4b-ab08-b13df984c223</UserSecretsId>
+  </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="ACMESharpCore" />
