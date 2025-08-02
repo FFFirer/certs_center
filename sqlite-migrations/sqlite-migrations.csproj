@@ -8,7 +8,7 @@
 
         <RootNamespace>CertsServer</RootNamespace>
         <AssemblyName>CertsServer.Migrations.Sqlite</AssemblyName>
-    </PropertyGroup>
+  </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">

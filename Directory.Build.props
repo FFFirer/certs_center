@@ -1,0 +1,6 @@
+<Project>
+  <!-- See https://aka.ms/dotnet/msbuild/customize for more details on customizing your build -->
+  <PropertyGroup>
+    <UserSecretsId>5be23d08-54c4-488c-acff-cca75c11ef03</UserSecretsId>
+  </PropertyGroup>
+</Project>

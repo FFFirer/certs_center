@@ -5,7 +5,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>CertsServer</RootNamespace>
-    <UserSecretsId>4a91da73-8aa4-4a4f-bb0e-3d2eda726e6f</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

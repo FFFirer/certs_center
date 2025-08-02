@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 
 namespace CertsServer;
 
@@ -7,8 +8,16 @@ public class CertDbContextDesignTimeFactory : IDesignTimeDbContextFactory<CertsS
 {
     public CertsServerDbContext CreateDbContext(string[] args)
     {
+        var configuration = new ConfigurationBuilder()
+            .AddCommandLine(args)
+            .AddUserSecrets("5be23d08-54c4-488c-acff-cca75c11ef03", true)
+            .AddEnvironmentVariables("CERTS_")
+            .Build();
+
+        var connectionString = configuration.GetConnectionString(configuration.GetValue("DefaultConnectionName", "Default"));
+
         var optionsBuilder = new DbContextOptionsBuilder<CertsServerDbContext>();
-        optionsBuilder.UseSqlite("Data Source=certs.db", sqlite =>
+        optionsBuilder.UseSqlite(connectionString, sqlite =>
         {
             sqlite.MigrationsAssembly("CertsServer.Migrations.Sqlite");
         });
