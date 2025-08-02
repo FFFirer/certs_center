@@ -486,3 +486,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Project
+# App_Data/certs.db

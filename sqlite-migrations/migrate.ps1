@@ -1,0 +1,1 @@
+dotnet ef database update --no-build -- --ConnectionStrings:Default="Data Source=../App_DAta/certs.db"
