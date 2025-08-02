@@ -6,14 +6,14 @@ namespace CertsServer.Cli;
 
 public static class DbContextFactory
 {
-    public static CertsServerDbContext Create(TextWriter writer, IConfiguration? configuration = default)
+    public static CertsServerDbContext Create(TextWriter writer, string? connectionString = default, IConfiguration? configuration = default)
     {
         var env = ConfigurationBuilderExtensions.CurrentEnvironment();
         writer.WriteLine("Environment: {0}", env);
 
         configuration ??= new ConfigurationBuilder().AddCertsServer(env).Build();
-
-        var connectionString = configuration.GetCertsServerConnectionString();
+        connectionString ??= configuration.GetCertsServerConnectionString();
+        
         writer.WriteLine("Using connection string: {0}", connectionString);
 
         var dbContextFactory = new CertDbContextDesignTimeFactory();

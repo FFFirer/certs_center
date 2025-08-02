@@ -12,8 +12,6 @@ public class CertDbContextDesignTimeFactory : IDesignTimeDbContextFactory<CertsS
 
         var configuration = new ConfigurationBuilder()
             .AddCommandLine(args)
-            .AddUserSecrets("5be23d08-54c4-488c-acff-cca75c11ef03", true)
-            .AddEnvironmentVariables("CERTS_")
             .Build();
 
         var connectionName = configuration.GetValue("DefaultConnectionName", "Default");

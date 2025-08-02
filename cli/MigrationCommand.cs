@@ -13,8 +13,12 @@ namespace CertsServer.Cli;
 
 public class MigrationsCommand : Command
 {
+    private readonly static Option<string> ConnectionStringOption = new Option<string>("--connection");
+
     public MigrationsCommand() : base("migrations", "About migrations")
     {
+        // Add(ConnectionStringOption);
+
         Add(new ListCommand());
         Add(new ScriptCommand());
     }
@@ -74,12 +78,17 @@ public class MigrationsCommand : Command
     {
         public ListCommand() : base("list", "")
         {
+            Add(ConnectionStringOption);
+
             this.SetAction((parseResult) =>
             {
                 try
                 {
                     var output = parseResult.Configuration.Output;
-                    var dbContext = DbContextFactory.Create(parseResult.Configuration.Output);
+
+                    var connection = parseResult.GetValue<string>("--connection");
+
+                    var dbContext = DbContextFactory.Create(parseResult.Configuration.Output, connection);
 
                     var applied = dbContext.Database.GetAppliedMigrations();
                     if (applied.IsNullOrEmpty() == false)

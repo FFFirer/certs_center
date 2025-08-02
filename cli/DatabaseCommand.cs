@@ -8,8 +8,11 @@ namespace CertsServer.Cli;
 
 public class DatabaseCommand : Command
 {
+    readonly static Option<string> ConnectionStringOption = new Option<string>("--connection");
+
     public DatabaseCommand() : base("database")
     {
+
         Add(new UpdateCommand());
     }
 
@@ -19,21 +22,23 @@ public class DatabaseCommand : Command
         {
             var targetOption = new Option<string>("--target");
 
+            Add(ConnectionStringOption);
             Add(targetOption);
 
             SetAction(parseResult =>
             {
                 var target = parseResult.GetValue(targetOption);
+                var connection = parseResult.GetValue(ConnectionStringOption);
 
-                return UpdateDatabase(parseResult.Configuration.Output, target);
+                return UpdateDatabase(parseResult.Configuration.Output, target, connection);
             });
         }
 
-        public static int UpdateDatabase(TextWriter writer, string? target)
+        public static int UpdateDatabase(TextWriter writer, string? target, string? connectionString)
         {
             try
             {
-                var dbContext = DbContextFactory.Create(writer);
+                var dbContext = DbContextFactory.Create(writer, connectionString);
 
                 var pending = dbContext.Database.GetPendingMigrations();
 
