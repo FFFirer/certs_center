@@ -23,14 +23,14 @@ namespace CertsServer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("TEXT");
+                    b.Property<long>("CreatedTime")
+                        .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("NotAfter")
-                        .HasColumnType("TEXT");
+                    b.Property<long?>("NotAfter")
+                        .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("NotBefore")
-                        .HasColumnType("TEXT");
+                    b.Property<long?>("NotBefore")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Path")
                         .IsRequired()
@@ -49,7 +49,7 @@ namespace CertsServer.Migrations
 
                     b.HasIndex("TicketEntityId");
 
-                    b.ToTable("TicketCertificates");
+                    b.ToTable("ticket_certificates", (string)null);
                 });
 
             modelBuilder.Entity("CertsServer.Data.TicketEntity", b =>
@@ -58,10 +58,10 @@ namespace CertsServer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("TEXT");
+                    b.Property<long>("CreatedTime")
+                        .HasColumnType("INTEGER");
 
-                    b.PrimitiveCollection<string>("DomainNames")
+                    b.Property<string>("DomainNames")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PfxPassword")
@@ -70,15 +70,16 @@ namespace CertsServer.Migrations
                     b.Property<string>("Remark")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset>("UpdatedTime")
+                    b.Property<string>("Status")
+                        .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedTime")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tickets");
+                    b.ToTable("tickets", (string)null);
                 });
 
             modelBuilder.Entity("CertsServer.Data.TicketCertificateEntity", b =>

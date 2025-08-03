@@ -2,6 +2,8 @@ using System;
 using System.CommandLine;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 
 namespace CertsServer.Cli;
@@ -14,6 +16,49 @@ public class DatabaseCommand : Command
     {
 
         Add(new UpdateCommand());
+        Add(new DropCommand());
+    }
+
+    public class DropCommand : Command
+    {
+        public DropCommand() : base("drop")
+        {
+            Add(ConnectionStringOption);
+
+            SetAction(parseResult =>
+            {
+                var connection = parseResult.GetValue(ConnectionStringOption);
+
+                return DropDatabase(parseResult.Configuration.Output, connection);
+            });
+        }
+
+        public static int DropDatabase(TextWriter writer, string? connectionString)
+        {
+            try
+            {
+                var dbContext = DbContextFactory.Create(writer, connectionString);
+
+                var applied = dbContext.Database.GetAppliedMigrations();
+
+                writer.WriteLine("Applied migrations:");
+                foreach (var p in applied)
+                {
+                    writer.WriteLine(p);
+                }
+
+                dbContext.Database.EnsureDeleted();
+
+                writer.WriteLine("Done.");
+
+                return 0;
+            }
+            catch (System.Exception ex)
+            {
+                writer.WriteLine(ex.ToString());
+                return 1;
+            }
+        }
     }
 
     public class UpdateCommand : Command

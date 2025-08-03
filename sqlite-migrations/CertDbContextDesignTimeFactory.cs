@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using CertsServer.Data;
+
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 
@@ -25,6 +27,11 @@ public class CertDbContextDesignTimeFactory : IDesignTimeDbContextFactory<CertsS
             sqlite.MigrationsAssembly("CertsServer.Migrations.Sqlite");
         });
 
-        return new CertsServerDbContext(optionsBuilder.Options);
+        var modelCreatingOptions = new ModelCreatingOptions<CertsServerDbContext>
+        {
+            ModelCreatingAction = modelBuilder => ModelCreatingExtensions.ApplySqliteConfigurations(modelBuilder)
+        };
+
+        return new CertsServerDbContext(optionsBuilder.Options, modelCreatingOptions);
     }
 }
