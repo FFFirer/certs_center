@@ -22,7 +22,7 @@ public static class Endpoints
         var apis = endpoints.MapGroup("/api");
 
         apis.MapGet("/certificate/all", CertificateHttpHandlers.ListAll);
-        apis.MapGet("/certificate", CertificateHttpHandlers.Get);
+        apis.MapGet("/certificate/{id:guid}", CertificateHttpHandlers.Get);
 
         return apis;
     }

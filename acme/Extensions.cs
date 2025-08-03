@@ -22,8 +22,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICertificateStore, X509StoreCertificateStore>();
 
         // acmestate
-        services.AddScoped<CheckForRenewal>();
-        services.AddScoped<BeginCertificateCreation>();
+        services.AddScoped<AcmeStateMachineContext>();
+        services.AddTransient<CheckForRenewal>();
+        services.AddTransient<BeginCertificateCreation>();
         services.AddTransient<TerminalState>();
 
         // http client

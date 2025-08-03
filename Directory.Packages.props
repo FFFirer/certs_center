@@ -21,13 +21,21 @@
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0-preview.3" />
     <PackageVersion Include="NSwag.AspNetCore" Version="14.4.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
     <PackageVersion Include="Quartz.AspNetCore" Version="3.14.0" />
     <PackageVersion Include="ACMESharpCore" Version="2.2.0.148" />
     <PackageVersion Include="PKISharp.SimplePKI" Version="2.0.1.148" />
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="Mapster.DependencyInjection" Version="1.0.3-pre02" />
     <PackageVersion Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageVersion Include="Serilog.Enrichers.AssemblyName" Version="2.0.0" />
+    <PackageVersion Include="Serilog.Enrichers.ClientInfo" Version="2.3.0" />
+    <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+    <PackageVersion Include="Serilog.Enrichers.Process" Version="3.0.0" />
+    <PackageVersion Include="Serilog.Enrichers.Span" Version="3.1.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.1-dev-00953" />
     <PackageVersion Include="Serilog.Sinks.OpenTelemetry" Version="4.2.1-dev-02306" />
     <PackageVersion Include="Serilog.Sinks.XUnit" Version="3.0.19" />

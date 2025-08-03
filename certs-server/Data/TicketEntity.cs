@@ -126,7 +126,7 @@ public class SqliteTicketCertificateEntityConfiguration : IEntityTypeConfigurati
 
         builder.HasKey(e => e.Id);
         builder.Property(x => x.CreatedTime).HasConversion(SqliteDateTimeOffsetValueConverter.Instance);
-        builder.Property(e => e.NotBefore).HasConversion(SqliteDateTimeOffsetValueConverter.Instance);
-        builder.Property(e => e.NotAfter).HasConversion(SqliteDateTimeOffsetValueConverter.Instance);
+        builder.Property(e => e.NotBefore).HasConversion(SqliteDateTimeValueConverter.Instance);
+        builder.Property(e => e.NotAfter).HasConversion(SqliteDateTimeValueConverter.Instance);
     }
 }
