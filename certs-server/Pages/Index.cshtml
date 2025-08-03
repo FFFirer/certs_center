@@ -1,0 +1,38 @@
+@page
+@model IndexModel
+ 
+@{
+    ViewData["Title"] = "Home";
+}
+
+<div>
+    <table>
+        <thead>
+            <tr>
+                <th>Ticket Id</th>
+                <th>Status</th>
+                <th>Remark</th>
+                <th>Domain Names</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if(Model.Tickets.IsNullOrEmpty()){
+                <tr>
+                    <td colspan="4">
+                        No Data
+                    </td>
+                </tr>
+            }
+            else {
+                foreach(var t in Model.Tickets){
+                    <tr>
+                        <td>@t.Id</td>
+                        <td>@t.Status</td>
+                        <td>@t.Remark</td>
+                        <td>@string.Join(",", t.Domains ?? [])</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

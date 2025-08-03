@@ -69,6 +69,8 @@ try
             });
         });
 
+    builder.Services.AddRazorPages();
+
     builder.Services
         .AddOpenApiDocument()
         .AddEndpointsApiExplorer()
@@ -83,7 +85,7 @@ try
         {
             quartz.AddJob<HandleTicketJob>(job =>
             {
-                job.WithIdentity(HandleTicketJob.JobKey);
+                job.WithIdentity(HandleTicketJob.JobKey).StoreDurably(true);
             });
         })
         .AddQuartzServer(quartzServer =>
@@ -137,6 +139,7 @@ try
     // custom
 
     // endpoints
+    app.MapRazorPages();
     app.MapEndpoints().ProducesProblem(500).ProducesValidationProblem();
 
     app.Run();
