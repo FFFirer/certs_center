@@ -3,6 +3,7 @@ using AgileConfig.Client;
 using CertsServer;
 using CertsServer.Acme;
 using CertsServer.Data;
+using CertsServer.QuartzJobs;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,9 @@ using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+
+using Quartz;
+using Quartz.AspNetCore;
 
 using Serilog;
 
@@ -75,6 +79,20 @@ try
         .AddAuthentication();
 
     builder.Services
+        .AddQuartz(quartz =>
+        {
+            quartz.AddJob<HandleTicketJob>(job =>
+            {
+                job.WithIdentity(HandleTicketJob.JobKey);
+            });
+        })
+        .AddQuartzServer(quartzServer =>
+        {
+            quartzServer.WaitForJobsToComplete = true;
+        })
+        .AddCertsServerHostedService();
+
+    builder.Services
         .AddOptions<AcmeOptions>("AcmeOptions");
     builder.Services
         .AddAcmeDefaults();
@@ -107,7 +125,7 @@ try
         app.UseSwaggerUi();
     }
 
-    
+
     app.UseStaticFiles();
 
     app.UseRouting();

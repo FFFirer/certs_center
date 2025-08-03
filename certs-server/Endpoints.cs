@@ -1,5 +1,6 @@
 ﻿using CertsServer.Acme;
 using CertsServer.Data;
+using CertsServer.QuartzJobs;
 
 using LettuceEncrypt;
 
@@ -11,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 
 using NSwag.Annotations;
 
+using Quartz;
+
 using System.Security.Cryptography.X509Certificates;
 
 namespace CertsServer;
@@ -21,8 +24,9 @@ public static class Endpoints
     {
         var apis = endpoints.MapGroup("/api");
 
-        apis.MapGet("/certificate/all", CertificateHttpHandlers.ListAll);
-        apis.MapGet("/certificate/{id:guid}", CertificateHttpHandlers.Get);
+        apis.MapGet("/ticket/all", TicketHttpHandlers.ListAll);
+        apis.MapGet("/ticket/{id:guid}", TicketHttpHandlers.Get);
+        apis.MapGet("/ticket/{id:guid}/plan", TicketHttpHandlers.GetPlanInfo);
 
         return apis;
     }
@@ -31,9 +35,9 @@ public static class Endpoints
 public record TicketDto(Guid Id, TicketStatus Status, string? Remark, string[]? Domains, CertificateDto[] Certificates);
 public record CertificateDto(Guid Id, string Path, TicketCertificateStatus Status, DateTime? NotBefore, DateTime? NotAfter, DateTimeOffset CreatedTime);
 
-public static class CertificateHttpHandlers
+public static class TicketHttpHandlers
 {
-    [OpenApiOperation("Certificates_All", "获取所有证书", "")]
+    [OpenApiOperation("Ticket_All", "获取所有Ticket", "")]
     public static async Task<List<TicketDto>> ListAll(
         [FromServices] CertsServerDbContext db,
         CancellationToken cancellationToken)
@@ -53,8 +57,12 @@ public static class CertificateHttpHandlers
                 c.CreatedTime)).ToArray())).ToList();
     }
 
-    [OpenApiOperation("Certificates_Get", "获取证书", "")]
-    public static async Task<Results<FileContentHttpResult, NotFound>> Get([FromRoute] Guid? id, [FromServices] ICertificateStore store, [FromServices] CertsServerDbContext certDbContext, CancellationToken cancellationToken)
+    [OpenApiOperation("Ticket_Get", "获取Ticket", "")]
+    public static async Task<Results<FileContentHttpResult, NotFound>> Get(
+        [FromRoute] Guid id,
+        [FromServices] ICertificateStore store,
+        [FromServices] CertsServerDbContext certDbContext,
+        CancellationToken cancellationToken)
     {
         var ticketCertificate = await certDbContext.TicketCertificates.FindAsync(id, cancellationToken);
         if (ticketCertificate is null)
@@ -73,4 +81,27 @@ public static class CertificateHttpHandlers
 
         return TypedResults.File(fileBytes, "application/octet-stream", certificate.Thumbprint + ".pfx");
     }
+
+    [OpenApiOperation("Ticket_GetPlanInfo", "获取Ticket信息", "")]
+    public static async Task<Results<Ok<TicketPlanInfo>, NotFound>> GetPlanInfo(
+        [FromRoute] Guid id,
+        [FromServices] ISchedulerFactory schedulerFactory,
+        CancellationToken cancellationToken)
+    {
+        var schd = await schedulerFactory.GetScheduler();
+        var trigger = await schd.GetTrigger(new TriggerKey(id.ToString()), cancellationToken);
+
+        if (trigger is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var planInfo = new TicketPlanInfo(
+            trigger.GetNextFireTimeUtc()?.ToLocalTime(),
+            trigger.GetPreviousFireTimeUtc()?.ToLocalTime());
+
+        return TypedResults.Ok(planInfo);
+    }
 }
+
+public record TicketPlanInfo(DateTimeOffset? NextFireTime, DateTimeOffset? PreviousFireTime);

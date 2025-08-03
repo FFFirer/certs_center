@@ -19,6 +19,8 @@ public static class FailReasons
 
 public class HandleTicketJob : IJob
 {
+    public static JobKey JobKey => new JobKey(nameof(HandleTicketJob));
+
     public static class DataMapKeys
     {
         public const string TicketId = nameof(TicketId);
