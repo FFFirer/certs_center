@@ -32,7 +32,7 @@ public static class Endpoints
     }
 }
 
-public record TicketDto(Guid Id, TicketStatus Status, string? Remark, string[]? Domains, CertificateDto[] Certificates);
+public record TicketDto(Guid Id, DateTimeOffset CreatedTime, TicketStatus Status, string? Remark, string[]? Domains, CertificateDto[] Certificates);
 public record CertificateDto(Guid Id, string Path, TicketCertificateStatus Status, DateTime? NotBefore, DateTime? NotAfter, DateTimeOffset CreatedTime);
 
 public static class TicketHttpHandlers
@@ -45,6 +45,7 @@ public static class TicketHttpHandlers
         var tickets = await db.Tickets.ToListAsync(cancellationToken);
         return tickets.Select(x => new TicketDto(
             x.Id,
+            x.CreatedTime,
             x.Status,
             x.Remark,
             x.DomainNames,

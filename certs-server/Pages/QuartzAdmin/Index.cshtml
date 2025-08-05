@@ -12,13 +12,14 @@
             <tr>
                 <th>No.</th>
                 <th>Trigger Name</th>
-                <th></th>
+                <th>Previous Fire Time</th>
+                <th>Next Fire Time</th>
             </tr>
         </thead>
         <tbody>
             @if(Model.Triggers.IsNullOrEmpty()){
                 <tr>
-                    <td colspan="3">
+                    <td colspan="4">
                         No Data
                     </td>
                 </tr>
@@ -27,8 +28,12 @@
                 foreach(var (item, index) in Model.Triggers.WithIndex()){
                     <tr>
                         <td>@(index + 1)</td>
-                        <td>@item.Name</td>
+                        <td>@(item.Key.Group)+@(item.Key.Name)</td>
                         <td>
+                            @item.PreviousFireTime
+                        </td>
+                        <td>
+                            @item.NextFireTime
                         </td>
                     </tr>
                 }

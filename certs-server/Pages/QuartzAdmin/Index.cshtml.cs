@@ -22,16 +22,14 @@ namespace CertsServer.Pages.QuartzAdmin
         public async Task OnGetAsync()
         {
             var schd = await _schedulerFactory.GetScheduler(this.HttpContext.RequestAborted);
-            var triggerKeys = await schd.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup(), this.HttpContext.RequestAborted);
+            var triggers = await schd.GetTriggersOfJob(HandleTicketJob.JobKey, this.HttpContext.RequestAborted);
 
-
-            // this.Triggers = triggers.Select(t => new TriggerDto(t.Key.Name)).ToList();
-            this.Triggers = triggerKeys.Select(x => new TriggerDto(x.Name)).ToList();
+            this.Triggers = triggers.Select(x => new TriggerDto(x.Key, x.GetPreviousFireTimeUtc()?.LocalDateTime, x.GetNextFireTimeUtc()?.LocalDateTime)).ToList();
         }
 
         public List<TriggerDto> Triggers { get; set; } = [];
 
 
-        public record TriggerDto(string? Name);
+        public record TriggerDto(TriggerKey Key, DateTimeOffset? PreviousFireTime, DateTimeOffset? NextFireTime);
     }
 }

@@ -14,6 +14,7 @@
         <thead>
             <tr>
                 <th>Ticket Id</th>
+                <th>Created Time</th>
                 <th>Status</th>
                 <th>Domain Names</th>
                 <th></th>
@@ -22,7 +23,7 @@
         <tbody>
             @if(Model.Tickets.IsNullOrEmpty()){
                 <tr>
-                    <td colspan="4">
+                    <td colspan="5">
                         No Data
                     </td>
                 </tr>
@@ -31,6 +32,7 @@
                 foreach(var t in Model.Tickets){
                     <tr>
                         <td>@t.Id</td>
+                        <td>@t.CreatedTime</td>
                         <td>@t.Status</td>
                         <td>@string.Join(",", t.Domains ?? [])</td>
                         <td>
