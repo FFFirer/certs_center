@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -67,7 +68,9 @@ public sealed class FileSystemAcmeStore : IAcmeStore
             return default(T);
         }
 
-        using var stream = File.OpenRead(filePath);
+        _logger.LogDebug("Load file from {Path}", filePath);
+
+        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         return await JsonSerializer.DeserializeAsync<T>(stream, cancellationToken: cancellationToken);
     }
 
@@ -79,8 +82,11 @@ public sealed class FileSystemAcmeStore : IAcmeStore
         var filePath = Path.Combine(DirectoryPath!, $"{fileName}");
 
         using var fs = File.Exists(filePath)
-            ? new FileStream(filePath, FileMode.Truncate, FileAccess.Write)
-            : new FileStream(filePath, FileMode.Create, FileAccess.Write);
+            ? new FileStream(filePath, FileMode.Truncate, FileAccess.Write, FileShare.Read)
+            : new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
+
+            
+        _logger.LogDebug("Save file to {Path}", filePath);
 
         await JsonSerializer.SerializeAsync(fs, value, cancellationToken: cancellationToken);
     }
@@ -91,6 +97,9 @@ public sealed class FileSystemAcmeStore : IAcmeStore
         var filePath = Path.Combine(DirectoryPath!, $"{fileName}");
 
         var exists = File.Exists(filePath);
+
+        
+        _logger.LogDebug("Exists file({Exists}): {Path}", exists, filePath);
 
         return Task.FromResult(exists);
     }
@@ -108,13 +117,36 @@ public sealed class FileSystemAcmeStore : IAcmeStore
         }
 
         if (typeof(T) == typeof(string))
-            return (T)(object)(await File.ReadAllTextAsync(filePath, cancellationToken));
-        else if (typeof(T) == typeof(byte[]))
-            return (T)(object)(await File.ReadAllBytesAsync(filePath, cancellationToken));
-        else if (typeof(T) == typeof(Stream) || typeof(T) == typeof(FileStream))
-            return (T)(object)(new FileStream(filePath, FileMode.Open));
-        else
-            throw new ArgumentException("Unsupported return type; must be one of:  string, byte[], Stream",
+        {
+            _logger.LogDebug("Load raw <string> from {Path}", filePath);
+
+            using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var sr = new StreamReader(fs);
+            return (T)(object)(await sr.ReadToEndAsync(cancellationToken));
+        }
+
+        if (typeof(T) == typeof(byte[]))
+        {
+            _logger.LogDebug("Load raw <byte[]> from {Path}", filePath);
+
+            using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var bytes = new byte[fs.Length];
+            using var sr = new StreamReader(fs);
+            // while(await sr.ReadAsync())
+
+            using var ms = new MemoryStream();
+            await fs.CopyToAsync(ms, cancellationToken);
+            return (T)(object)(ms.ToArray());
+        }
+
+        if (typeof(T) == typeof(Stream) || typeof(T) == typeof(FileStream))
+        {
+            _logger.LogDebug("Load raw <stream> from {Path}", filePath);
+
+            return (T)(object)(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read));
+        }
+
+        throw new ArgumentException("Unsupported return type; must be one of:  string, byte[], Stream",
                     nameof(T));
     }
 
@@ -125,22 +157,36 @@ public sealed class FileSystemAcmeStore : IAcmeStore
         var fileName = string.Format(keyFormat, keyParams.ToArray());
         var filePath = Path.Combine(DirectoryPath!, $"{fileName}");
 
-        switch (value)
+        using var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
+
+        if (value is string str)
         {
-            case string s:
-                await File.WriteAllTextAsync(filePath, s, cancellationToken);
-                break;
-            case byte[] b:
-                await File.WriteAllBytesAsync(filePath, b, cancellationToken);
-                break;
-            case Stream m:
-                using (var fs = new FileStream(filePath, FileMode.Create))
-                    m.CopyTo(fs);
-                break;
-            default:
-                throw new ArgumentException("Unsupported value type; must be one of:  string, byte[], Stream",
-                        nameof(value));
+            _logger.LogDebug("Save raw <string> to {Path}", filePath);
+
+            using var sw = new StreamWriter(fs);
+            await sw.WriteAsync(str);
+            return;
         }
+
+        if (value is byte[] bytes)
+        {
+            _logger.LogDebug("Save raw <byte[]> to {Path}", filePath);
+
+            using var ms = new MemoryStream(bytes);
+            await ms.CopyToAsync(fs, cancellationToken);
+            return;
+        }
+
+        if (value is Stream stream)
+        {
+            _logger.LogDebug("Save raw <stream> to {Path}", filePath);
+
+            await stream.CopyToAsync(fs, cancellationToken);
+            return;
+        }
+
+        throw new ArgumentException("Unsupported value type; must be one of:  string, byte[], Stream",
+                nameof(value));
     }
 
     public Task RemoveAsync(string keyFormat, CancellationToken cancellationToken = default, params IEnumerable<object> keyParams)
@@ -151,6 +197,8 @@ public sealed class FileSystemAcmeStore : IAcmeStore
         if (File.Exists(filePath))
         {
             File.Delete(filePath);
+            
+            _logger.LogDebug("Removed from {Path}", filePath);
         }
 
         return Task.CompletedTask;

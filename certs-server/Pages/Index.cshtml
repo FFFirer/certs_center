@@ -6,13 +6,17 @@
 }
 
 <div>
+    <a asp-page="Tickets/Create">Create a ticket</a>
+</div>
+
+<div>
     <table>
         <thead>
             <tr>
                 <th>Ticket Id</th>
                 <th>Status</th>
-                <th>Remark</th>
                 <th>Domain Names</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -28,8 +32,14 @@
                     <tr>
                         <td>@t.Id</td>
                         <td>@t.Status</td>
-                        <td>@t.Remark</td>
                         <td>@string.Join(",", t.Domains ?? [])</td>
+                        <td>
+                            @if(t.Status != Data.TicketStatus.Deleted) {
+                                <form method="post" asp-page-handler="Delete" asp-route-id="@t.Id">
+                                    <button type="submit">delete</button>
+                                </form>
+                            }
+                        </td>
                     </tr>
                 }
             }

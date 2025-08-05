@@ -1,0 +1,26 @@
+@page
+@model CreateModel
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form method="post">
+    <fieldset>
+        <div>
+            <label for="DomainNames">Domain Names:</label>
+            <input type="text" name="DomainNames" style="width: 100%;" value="" />
+            <span asp-validation-for="DomainNames"></span>
+        </div>
+        <div>
+            <label for="PfxPassword">Pfx Password:</label>
+            <input type="text" name="PfxPassword" style="width: 100%;" value="" />
+        </div>
+        <div>
+            <label>&nbsp;</label>
+            <input type="submit" value="Submit" class="submit" />
+        </div>
+    </fieldset>
+</form>

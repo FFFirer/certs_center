@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 using ACMESharp.Crypto.JOSE;
 using ACMESharp.Protocol;
@@ -18,13 +19,16 @@ public class AcmeClientFactory : IDisposable
     private readonly IOptions<AcmeOptions> _options;
     private readonly IAcmeStore _store;
     private bool _disposed;
+    private readonly ILoggerFactory _loggerFactory;
 
     public AcmeClientFactory(
+        ILoggerFactory loggerFactory,
         IHttpClientFactory factory,
         ILogger<AcmeClientFactory> logger,
         IOptions<AcmeOptions> options,
         IAcmeStore store)
     {
+        _loggerFactory = loggerFactory;
         _factory = factory;
         _logger = logger;
         _options = options;
@@ -39,6 +43,8 @@ public class AcmeClientFactory : IDisposable
         {
             throw new ObjectDisposedException(nameof(AcmeClientFactory));
         }
+
+        await GetOrCreateAccountAsync(cancellationToken);
 
         if (refresh)
         {
@@ -55,32 +61,31 @@ public class AcmeClientFactory : IDisposable
 
     private async Task<AcmeProtocolClient> CreateClient(bool refresh, CancellationToken cancellationToken)
     {
-        var acmeDir = await _store.LoadAsync<ServiceDirectory>(AcmeStoreKeys.AcmeDirectory, cancellationToken);
-        var account = await _store.LoadAsync<AccountDetails>(AcmeStoreKeys.AcmeAccountDetails, cancellationToken);
-        var accountKey = await _store.LoadAsync<AccountKey>(AcmeStoreKeys.AcmeAccountKey, cancellationToken);
-
-        IJwsTool? accountSigner = default;
-        string? accountKeyHash = default;
-
-        if (accountKey is not null)
-        {
-            accountSigner = accountKey.GenerateTool();
-            accountKeyHash = AcmeHelper.ComputeHash(accountSigner.Export());
-        }
-
         var http = _factory.CreateClient(_options.Value.CaName);
-        var acme = new AcmeProtocolClient(http, acmeDir, account, accountSigner, logger: _logger, usePostAsGet: true);
 
-        if (acmeDir is null || refresh)
-        {
-            acmeDir = await acme.GetDirectoryAsync(cancellationToken);
-            await _store.SaveAsync(acmeDir, AcmeStoreKeys.AcmeDirectory, cancellationToken);
-            acme.Directory = acmeDir;
-        }
+        var clientLogger = _loggerFactory.CreateLogger<AcmeProtocolClient>();
+        var acme = new AcmeProtocolClient(http, _serviceDirectory, _account, _accountSinger, logger: clientLogger, usePostAsGet: true);
 
+        await CheckServiceDirectoryAsync(acme, cancellationToken);
         await CheckNonceAsync(acme, cancellationToken);
 
         return acme;
+    }
+
+    private async Task CheckServiceDirectoryAsync(AcmeProtocolClient acme, CancellationToken cancellationToken)
+    {
+        if (_serviceDirectory is null)
+        {
+            _serviceDirectory = await _store.LoadAsync<ServiceDirectory>(AcmeStoreKeys.AcmeDirectory, cancellationToken);
+        }
+
+        if (_serviceDirectory is null)
+        {
+            _serviceDirectory = await acme.GetDirectoryAsync(cancellationToken);
+            await _store.SaveAsync(_serviceDirectory, AcmeStoreKeys.AcmeDirectory, cancellationToken);
+        }
+
+        acme.Directory = _serviceDirectory;
     }
 
     private async Task<AcmeProtocolClient> CheckNonceAsync(AcmeProtocolClient client, CancellationToken cancellationToken)
@@ -123,32 +128,74 @@ public class AcmeClientFactory : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    private AccountDetails? _account { get; set; }
+    private IJwsTool? _accountSinger { get; set; }
+    private ServiceDirectory? _serviceDirectory { get; set; }
+
+    private async Task<ServiceDirectory> GetServiceDirectory(CancellationToken cancellationToken)
+    {
+        using var acme = await CreateClient(true, cancellationToken);
+        return await acme.GetDirectoryAsync(cancellationToken);
+    }
+
+    private readonly Semaphore _semaphore = new Semaphore(1, 1);
+
     public async Task<Account> GetOrCreateAccountAsync(CancellationToken cancellationToken)
     {
-        var acme = await CreateClient(false, cancellationToken);
-
-        if (acme.Account is not null)
+        if (_account?.Payload is not null)
         {
-            return acme.Account.Payload;
+            return _account.Payload;
         }
 
-        if (_options.Value.Email.IsNullOrEmpty())
+        _semaphore.WaitOne();
+
+        try
         {
-            throw new ArgumentException("Email is required");
+            _account = await _store.LoadAsync<AccountDetails>(AcmeStoreKeys.AcmeAccountDetails, cancellationToken);
+            var accountKey = await _store.LoadAsync<AccountKey>(AcmeStoreKeys.AcmeAccountKey, cancellationToken);
+
+            if (_account is null || accountKey is null)
+            {
+
+                if (_options.Value.Email.IsNullOrEmpty())
+                {
+                    throw new ArgumentException("Email is required");
+                }
+
+                if (_options.Value.AcceptTermOfService == false)
+                {
+                    throw new ArgumentException("Accept of teamservice is required");
+                }
+
+                using var acme = await CreateClient(true, cancellationToken);
+
+                var account = await acme.CreateAccountAsync(_options.Value.Email.Select(x => $"mailto:{x}"), _options.Value.AcceptTermOfService, cancel: cancellationToken);
+                _accountSinger = acme.Signer;
+                accountKey = new AccountKey(_accountSinger.JwsAlg, _accountSinger.Export());
+
+                await _store.SaveAsync(account, AcmeStoreKeys.AcmeAccountDetails, cancellationToken);
+                await _store.SaveAsync(accountKey, AcmeStoreKeys.AcmeAccountKey, cancellationToken);
+
+                _account = account;
+            }
+
+
+            if (_accountSinger is null)
+            {
+                _accountSinger = accountKey.GenerateTool();
+            }
+
+            return _account.Payload;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation(ex, "Get or create account failed");
+        }
+        finally
+        {
+            _semaphore.Release();
         }
 
-        if (_options.Value.AcceptTermOfService == false)
-        {
-            throw new ArgumentException("Accept of teamservice is required");
-        }
-
-        var account = await acme.CreateAccountAsync(_options.Value.Email.Select(x => $"mailto:{x}"), _options.Value.AcceptTermOfService, cancel: cancellationToken);
-        var accountSigner = acme.Signer;
-        var accountKey = new AccountKey(accountSigner.JwsAlg, accountSigner.Export());
-
-        await _store.SaveAsync(account, AcmeStoreKeys.AcmeAccountDetails, cancellationToken);
-        await _store.SaveAsync(accountKey, AcmeStoreKeys.AcmeAccountKey, cancellationToken);
-
-        return account.Payload;
+        throw new Exception("Create account failed");
     }
 }

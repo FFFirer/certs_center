@@ -240,15 +240,6 @@ public class AcmeCertificateFactory
 
     public async Task<Account> GetOrCreateAccountAsync(CancellationToken cancellationToken)
     {
-        // var acme = await _clientFactory.Create(cancellationToken: cancellationToken);
-
-        // if (acme.Account is null)
-        // {
-
-        // }
-
-        // return acme.Account!.Payload;
-
         return await _clientFactory.GetOrCreateAccountAsync(cancellationToken);
     }
 

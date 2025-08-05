@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using CertsServer.QuartzJobs;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 using Quartz;
 
@@ -32,12 +33,18 @@ public class HandleTicketStartupHostedService : BackgroundService
         var schd = await scope.ServiceProvider.GetRequiredService<ISchedulerFactory>().GetScheduler();
         foreach (var t in tickets)
         {
+            if (t.Status == Data.TicketStatus.Deleted)
+            {
+                continue;
+            }
+
             var trigger = TriggerBuilder.Create()
                 .ForJob(HandleTicketJob.JobKey)
                 .WithIdentity(t.Id.ToString())
                 .WithSimpleSchedule(plan =>
                 {
-                    plan.WithInterval(TimeSpan.FromDays(1));
+                    plan.WithInterval(TimeSpan.FromMinutes(5));
+                    plan.RepeatForever();
                 })
                 .UsingJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object>
                 {
@@ -47,7 +54,7 @@ public class HandleTicketStartupHostedService : BackgroundService
 
             await schd.ScheduleJob(trigger, stoppingToken);
             _logger.LogInformation("Trigger HandleTicketJob for {TicketId}", t.Id);
-        } 
+        }
     }
 }
 
@@ -56,6 +63,22 @@ public static class Extensions
     public static bool IsNullOrEmpty<T>([NotNullWhen(false)] this IEnumerable<T>? source)
     {
         return source is null || !source.Any();
+    }
+
+    public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> source)
+    {
+        if (source is null)
+        {
+            yield break;
+        }
+
+        int i = 0;
+
+        foreach (var item in source)
+        {
+            yield return (item, i);
+            i += 1;
+        }
     }
 
 

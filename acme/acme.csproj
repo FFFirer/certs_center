@@ -7,7 +7,7 @@
 
         <RootNamespace>CertsServer.Acme</RootNamespace>
         <AssemblyName>CertsServer.Acme</AssemblyName>
-  </PropertyGroup>
+    </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="ACMESharpCore" />

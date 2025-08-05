@@ -1,0 +1,38 @@
+﻿@page
+@model CertsServer.Pages.QuartzAdmin.IndexModel
+@{
+    ViewData["Title"] = "Triggers";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<div>
+    <table>
+        <thead>
+            <tr>
+                <th>No.</th>
+                <th>Trigger Name</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if(Model.Triggers.IsNullOrEmpty()){
+                <tr>
+                    <td colspan="3">
+                        No Data
+                    </td>
+                </tr>
+            }
+            else {
+                foreach(var (item, index) in Model.Triggers.WithIndex()){
+                    <tr>
+                        <td>@(index + 1)</td>
+                        <td>@item.Name</td>
+                        <td>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

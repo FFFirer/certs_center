@@ -1,5 +1,8 @@
 using System;
+
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace CertsServer.Acme;
 
@@ -12,12 +15,20 @@ public static class ServiceCollectionExtensions
             .AddAlibabaCloudDnsChallengeProvider();
     }
 
+
+    public static IServiceCollection AddOptionsBySectionPath<T>(this IServiceCollection services, string path)
+        where T : class
+    {
+        return services.AddTransient<IConfigureOptions<T>>(sp => new ConfigureOptions<T>(options => sp.GetRequiredService<IConfiguration>().GetSection(path)?.Bind(options)));
+    }
+
     public static IServiceCollection AddAcme(this IServiceCollection services)
     {
-        services.AddScoped<AcmeClientFactory>();
+        services.AddSingleton<AcmeClientFactory>();
         services.AddScoped<AcmeCertificateFactory>();
 
-        services.AddOptions<AcmeOptions>("Acme");
+        services.AddOptionsBySectionPath<AcmeOptions>("Acme");
+
         services.AddSingleton<IAcmeStore, FileSystemAcmeStore>();
         services.AddSingleton<ICertificateStore, X509StoreCertificateStore>();
 

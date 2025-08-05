@@ -16,10 +16,17 @@ public enum TicketStatus
     Processing,
     Finished,
     Failed,
+    Deleted,
 }
 
 public class TicketEntity
 {
+    public TicketEntity()
+    {
+        Id = Guid.NewGuid();
+        CreatedTime = DateTimeOffset.Now;
+    }
+
     public Guid Id { get; set; }
     public string[]? DomainNames { get; set; }
     public string? PfxPassword { get; set; }

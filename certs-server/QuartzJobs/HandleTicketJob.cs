@@ -95,6 +95,9 @@ public class HandleTicketJob : IJob
             await _db.SaveChangesAsync(context.CancellationToken);
 
             var certificateFactory = scope.ServiceProvider.GetRequiredService<AcmeCertificateFactory>();
+
+            var account = await certificateFactory.GetOrCreateAccountAsync(context.CancellationToken);
+
             certificate = await certificateFactory.CreateCertificateAsync(new(ticketId, ticket.DomainNames), context.CancellationToken);
 
             if (certificate is null)
