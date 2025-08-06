@@ -1,0 +1,25 @@
+/* TailwindCSS configuration file. */
+@import "tailwindcss";
+@source "Assets/**/*.{ts,tsx}";
+@source "Pages/**/*.{cshtml,razor}";
+
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark;
+  root: ":root";
+  include: ;
+  exclude: ;
+  prefix: "ds-";
+  logs: true;
+}
+
+/* @plugin "@tailwindcss/typography"; */
+
+html {
+    position: relative;
+    height: 100%;
+}
+
+body {
+    height: 100%;
+    width: 100%;
+}

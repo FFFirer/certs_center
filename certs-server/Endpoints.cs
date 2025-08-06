@@ -9,12 +9,16 @@ using McMaster.AspNetCore.Kestrel.Certificates;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 
 using NSwag.Annotations;
 
 using Quartz;
 
 using System.Security.Cryptography.X509Certificates;
+
+using Vite.AspNetCore;
 
 namespace CertsServer;
 
@@ -27,8 +31,48 @@ public static class Endpoints
         apis.MapGet("/ticket/all", TicketHttpHandlers.ListAll);
         apis.MapGet("/ticket/{id:guid}", TicketHttpHandlers.Get);
         apis.MapGet("/ticket/{id:guid}/plan", TicketHttpHandlers.GetPlanInfo);
+        apis.MapGet("/vite-manifest", (IViteManifest vitemanifest, IOptions<ViteOptions> viteOptions) =>
+        {
+            var manifest = vitemanifest.Select(x => new
+            {
+                x.Src,
+                x.IsEntry,
+                x.IsDynamicEntry,
+                x.File,
+                x.Css,
+                x.Assets,
+                x.DynamicImports
+            });
+
+            return new
+            {
+                manifest,
+                viteOptions.Value,
+
+            };
+        });
+        apis.MapGet("/vite-manifest/test", TestViteManifest);
 
         return apis;
+    }
+
+    public static dynamic TestViteManifest([FromServices] IOptions<ViteOptions> viteOptions, [FromServices] IWebHostEnvironment environment)
+    {
+        var basePath = viteOptions.Value.Base?.Trim('/');
+        var rootDir = Path.Combine(environment.WebRootPath, basePath ?? string.Empty);
+
+        var manifest = viteOptions.Value.Manifest;
+
+        var fileProvider = new PhysicalFileProvider(rootDir);
+        var fileInfo = fileProvider.GetFileInfo(manifest);
+
+        return new
+        {
+            basePath,
+            rootDir,
+            manifest,
+            fileInfo
+        };
     }
 }
 

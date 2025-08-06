@@ -4,14 +4,15 @@
     ViewData["Title"] = "Triggers";
 }
 
-<h2>@ViewData["Title"]</h2>
+<h2 class="text-2xl">@ViewData["Title"]</h2>
 
 <div>
-    <table>
+    <table class="ds-table">
         <thead>
             <tr>
                 <th>No.</th>
                 <th>Trigger Name</th>
+                <th>Job Name</th>
                 <th>Previous Fire Time</th>
                 <th>Next Fire Time</th>
             </tr>
@@ -19,7 +20,7 @@
         <tbody>
             @if(Model.Triggers.IsNullOrEmpty()){
                 <tr>
-                    <td colspan="4">
+                    <td colspan="5">
                         No Data
                     </td>
                 </tr>
@@ -29,6 +30,7 @@
                     <tr>
                         <td>@(index + 1)</td>
                         <td>@(item.Key.Group)+@(item.Key.Name)</td>
+                        <td>@(item.JobKey.Group)+@(item.JobKey.Name)</td>
                         <td>
                             @item.PreviousFireTime
                         </td>

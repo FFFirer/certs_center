@@ -42,6 +42,7 @@
     <PackageVersion Include="Serilog.Sinks.XUnit" Version="3.0.19" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="System.CommandLine" Version="2.0.0-beta6.25358.103" />
+    <PackageVersion Include="Vite.AspNetCore" Version="2.4.1" />
   </ItemGroup>
   <ItemGroup>
     <!-- xunit -->

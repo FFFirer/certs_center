@@ -1,0 +1,7 @@
+{
+  "tailwind.config.css": {
+    "file": "assets/tailwind-C7RVtanG.css",
+    "src": "tailwind.config.css",
+    "isEntry": true
+  }
+}

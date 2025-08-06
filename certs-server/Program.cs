@@ -17,6 +17,8 @@ using Quartz.AspNetCore;
 
 using Serilog;
 
+using Vite.AspNetCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
@@ -38,6 +40,11 @@ try
         serviceInstanceId: Environment.MachineName);
 
     var DefaultEndpoint = builder.Configuration.GetValue("Oltp:Endpoint", "http://127.0.0.1:4317");
+
+    builder.Services.Configure<HostOptions>(options =>
+    {
+        options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+    });
 
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(configureResource)
@@ -72,7 +79,15 @@ try
             });
         });
 
-    builder.Services.AddRazorPages();
+    builder.Services.AddViteServices(viteOptions =>
+    {
+        viteOptions.Base = "dist";
+        viteOptions.Server.AutoRun = true;
+        viteOptions.Server.PackageManager = "pnpm";
+    });
+
+    builder.Services
+        .AddRazorPages();
 
     builder.Services
         .AddOpenApiDocument()
@@ -129,14 +144,13 @@ try
 
     app.UseSerilogRequestLogging();
 
-    if (app.Environment.IsDevelopment())
+    if (app.Environment.IsDevelopment() || app.Configuration.GetValue("EnableSwagger", false) == true)
     {
         app.UseOpenApi();
         app.UseSwaggerUi();
     }
 
-
-    app.UseStaticFiles();
+    // app.UseStaticFiles();
 
     app.UseRouting();
 
@@ -147,8 +161,20 @@ try
     // custom
 
     // endpoints
-    app.MapRazorPages();
+    app.MapStaticAssets();
+    app.MapRazorPages()
+        .WithStaticAssets();
     app.MapEndpoints().ProducesProblem(500).ProducesValidationProblem();
+
+    if (app.Environment.IsDevelopment())
+    {
+        // WebSockets support is required for HMR (hot module reload).
+        // Uncomment the following line if your pipeline doesn't contain it.
+        app.UseWebSockets();
+        // Enable all required features to use the Vite Development Server.
+        // Pass true if you want to use the integrated middleware.
+        app.UseViteDevelopmentServer(/* false */);
+    }
 
     app.Run();
     return 0;

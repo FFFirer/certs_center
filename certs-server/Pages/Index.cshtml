@@ -6,15 +6,15 @@
 }
 
 <div>
-    <a asp-page="Tickets/Create">Create a ticket</a>
+    <a class="ds-btn ds-btn-primary" asp-page="Tickets/Create">Create a ticket</a>
 </div>
 
 <div>
-    <table>
+    <table class="ds-table">
         <thead>
             <tr>
-                <th>Ticket Id</th>
                 <th>Created Time</th>
+                <th>Ticket Id</th>
                 <th>Status</th>
                 <th>Domain Names</th>
                 <th></th>
@@ -31,14 +31,14 @@
             else {
                 foreach(var t in Model.Tickets){
                     <tr>
-                        <td>@t.Id</td>
                         <td>@t.CreatedTime</td>
+                        <td>@t.Id</td>
                         <td>@t.Status</td>
                         <td>@string.Join(",", t.Domains ?? [])</td>
                         <td>
                             @if(t.Status != Data.TicketStatus.Deleted) {
                                 <form method="post" asp-page-handler="Delete" asp-route-id="@t.Id">
-                                    <button type="submit">delete</button>
+                                    <button type="submit" class="ds-btn ds-btn-xs ds-btn-warning">DELETE</button>
                                 </form>
                             }
                         </td>

@@ -24,12 +24,13 @@ namespace CertsServer.Pages.QuartzAdmin
             var schd = await _schedulerFactory.GetScheduler(this.HttpContext.RequestAborted);
             var triggers = await schd.GetTriggersOfJob(HandleTicketJob.JobKey, this.HttpContext.RequestAborted);
 
-            this.Triggers = triggers.Select(x => new TriggerDto(x.Key, x.GetPreviousFireTimeUtc()?.LocalDateTime, x.GetNextFireTimeUtc()?.LocalDateTime)).ToList();
+            this.Triggers = triggers.Select(
+                x => new TriggerDto(x.Key, x.JobKey, x.GetPreviousFireTimeUtc()?.LocalDateTime, x.GetNextFireTimeUtc()?.LocalDateTime)).ToList();
         }
 
         public List<TriggerDto> Triggers { get; set; } = [];
 
 
-        public record TriggerDto(TriggerKey Key, DateTimeOffset? PreviousFireTime, DateTimeOffset? NextFireTime);
+        public record TriggerDto(TriggerKey Key, JobKey JobKey, DateTimeOffset? PreviousFireTime, DateTimeOffset? NextFireTime);
     }
 }

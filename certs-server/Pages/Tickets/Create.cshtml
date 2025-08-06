@@ -5,22 +5,24 @@
     ViewData["Title"] = "Create";
 }
 
-<h2>@ViewData["Title"]</h2>
+<h2 class="text-2xl">@ViewData["Title"]</h2>
 
-<form method="post">
-    <fieldset>
+<form method="post" class="px-2">
+    <fieldset class="ds-fieldset">
         <div>
-            <label for="DomainNames">Domain Names:</label>
-            <input type="text" name="DomainNames" style="width: 100%;" value="" />
+            <legend class="ds-fieldset-legend">Domain Names</legend>
+            @* <label for="DomainNames">Domain Names:</label> *@
+            <input type="text" class="ds-input" name="DomainNames" style="width: 100%;" value="" />
             <span asp-validation-for="DomainNames"></span>
         </div>
+    </fieldset>
+    <fieldset class="ds-fieldset">
         <div>
-            <label for="PfxPassword">Pfx Password:</label>
-            <input type="text" name="PfxPassword" style="width: 100%;" value="" />
-        </div>
-        <div>
-            <label>&nbsp;</label>
-            <input type="submit" value="Submit" class="submit" />
+            <legend class="ds-fieldset-legend">Pfx Password</legend>
+            @* <label for="PfxPassword">Pfx Password:</label> *@
+            <input type="text" class="ds-input" name="PfxPassword" style="width: 100%;" value="" />
         </div>
     </fieldset>
+
+    <input type="submit" value="Submit" class="ds-btn ds-btn-primary mt-4" />
 </form>

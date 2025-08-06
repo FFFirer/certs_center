@@ -31,6 +31,7 @@ public class IndexModel : PageModel
             .Select(
                 t => new TicketDto(
                     t.Id,
+                    t.CreatedTime,
                     t.Status,
                     t.Remark,
                     t.DomainNames,

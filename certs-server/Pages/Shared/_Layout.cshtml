@@ -1,50 +1,60 @@
+@inject IViteManifest Manifest
+@inject IHostEnvironment Env
+@inject IConfiguration Config
+
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - webapp_demo</title>
-
+    <title>@ViewData["Title"] - Certs Server</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
     <environment include="Development">
+        <link rel="stylesheet" vite-href="~/dist/tailwind.config.css" />
         @* <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
         <link rel="stylesheet" href="~/css/site.css" /> *@
     </environment>
     <environment exclude="Development">
+        <link rel="stylesheet" data-order="1" vite-href="tailwind.config.css" />
+        @* <link rel="stylesheet" data-order="2" href="~/dist/@Manifest["tailwind.config.css"]!.File" /> *@
+        @* <link rel="stylesheet" data-order="3" href="~/dist/tailwind.config.css" /> *@
         @* <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
               asp-fallback-href="~/lib/bootstrap/dist/css/bootstrap.min.css"
               asp-fallback-test-class="sr-only" asp-fallback-test-property="position" asp-fallback-test-value="absolute" />
         <link rel="stylesheet" href="~/css/site.min.css" asp-append-version="true" /> *@
     </environment>
 </head>
+
 <body>
-    <nav class="navbar navbar-inverse navbar-fixed-top">
-        <div class="container">
-            <div class="navbar-header">
-                @* <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button> *@
-                <a asp-page="/Index" class="navbar-brand">Home</a>
-            </div>
-            <div class="navbar-collapse collapse">
-                <ul class="nav navbar-nav">
-                    <li><a asp-page="/QuartzAdmin/Index">Triggers</a></li>
-                    @* <li><a asp-page="/About">About</a></li> *@
-                    @* <li><a asp-page="/Contact">Contact</a></li> *@
-                </ul>
-                @* <partial name="_LoginPartial" /> *@
-            </div>
+
+
+    <div class="ds-navbar bg-base-100 shadow-sm">
+
+        <div class="flex-none">
+            <a asp-page="/Index" class="ds-btn ds-btn-ghost text-xl">Home</a>
         </div>
-    </nav>
+        <div class="flex-1">
+            <ul class="ds-menu ds-menu-horizontal px-1">
+                <li><a asp-page="/QuartzAdmin/Index">Triggers</a></li>
+            </ul>
+        </div>
+        <div class="flex-0">
+            <ul class="ds-menu ds-menu-horizontal px-1">
+                @if (Env.IsDevelopment() || Config.GetValue("EnableSwagger", false) == true)
+                {
+                    <li><a href="/swagger">Swagger</a></li>
+                }
+            </ul>
+        </div>
+    </div>
 
     @* <partial name="_CookieConsentPartial" /> *@
 
-    <div class="container body-content">
+    <div class="px-2">
         @RenderBody()
-        <hr />
-        <footer>
+        <footer class="mt-2">
+            <hr />
             <p>&copy; 2025 - certs-server</p>
         </footer>
     </div>
@@ -72,4 +82,5 @@
 
     @* @RenderSection("Scripts", required: false) *@
 </body>
+
 </html>
