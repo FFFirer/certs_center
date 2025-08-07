@@ -55,14 +55,9 @@ public class AliDnsChallengeProvider : IDnsChallengeProvider
     {
         var (rr, rootDomainName) = SplitDomainName(acmeDomain);
 
-        var exists = await _client.DescribeDomainRecordsAsync(new()
-        {
-            DomainName = rootDomainName,
-            Type = "TXT"
-        });
+        var existsRecordId = await ExistsDomainTxtRecordAsync(rootDomainName, rr, txtRecord, cancellationToken);
 
-        var same = exists.Body.DomainRecords.Record.Where(x => x.Type == "TXT" && x.Value == txtRecord).FirstOrDefault();
-        if (same is null)
+        if (existsRecordId is null)
         {
             _logger.LogDebug("[AliDns] Dns01 Challenge: {DomainName}. RootDomain:{domain}, Record value:{rr}", acmeDomain, rootDomainName, rr);
 
@@ -83,7 +78,28 @@ public class AliDnsChallengeProvider : IDnsChallengeProvider
             return new DomainTxtRecordContext(acmeDomain, txtRecord, resp.Body.RecordId);
         }
 
-        return new DomainTxtRecordContext(acmeDomain, txtRecord, same.RecordId);
+        return new DomainTxtRecordContext(acmeDomain, txtRecord, existsRecordId);
+    }
+
+    private async Task<string?> ExistsDomainTxtRecordAsync(string rootDomainName, string rr, string txtRecord, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var exists = await _client.DescribeDomainRecordsAsync(new()
+            {
+                DomainName = rootDomainName,
+                Type = "TXT"
+            });
+
+            var same = exists.Body.DomainRecords.Record.FirstOrDefault(x => x.Type == "TXT" && x.RR == rr && x.Value == txtRecord);
+
+            return same?.RecordId;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Check {RR} of {RootDomain} for {TxtValue}", rr, rootDomainName, txtRecord);
+            return null;
+        }
     }
 
     public async Task RemoveTxtRecordAsync(DomainTxtRecordContext context, CancellationToken cancellationToken)
