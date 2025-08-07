@@ -1,6 +1,8 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -25,10 +27,14 @@ public sealed class FileSystemAcmeStoreOptions
 {
     public string Directory { get; set; } = "App_Data/acme_store";
 }
+
+
 public sealed class FileSystemAcmeStore : IAcmeStore
 {
     private readonly IOptions<FileSystemAcmeStoreOptions> _options;
     private readonly ILogger<FileSystemAcmeStore> _logger;
+
+    private readonly object _lockOfDir = new object();
 
     public FileSystemAcmeStore(
         IOptions<FileSystemAcmeStoreOptions> options,
@@ -38,28 +44,45 @@ public sealed class FileSystemAcmeStore : IAcmeStore
         _logger = logger;
     }
 
+    private DirectoryInfo? _dir;
+    public string DirectoryPath
+    {
+        get
+        {
+            CheckDirectory();
+            return _dir.FullName;
+        }
+    }
 
-    private string DirectoryPath => Path.Combine(AppContext.BaseDirectory, _options.Value.Directory);
-
+    [MemberNotNull(nameof(_dir))]
     private void CheckDirectory()
     {
-        if (string.IsNullOrWhiteSpace(DirectoryPath))
+        if (string.IsNullOrWhiteSpace(_options.Value.Directory))
         {
             throw new ArgumentNullException("FileSystemAcmeStoreOptions.Directory");
         }
 
-        if (Directory.Exists(DirectoryPath))
+        if (_dir is null)
         {
-            return;
+            lock (_lockOfDir)
+            {
+                if (_dir is null)
+                {
+                    if (Directory.Exists(_options.Value.Directory))
+                    {
+                        _dir = new DirectoryInfo(_options.Value.Directory);
+                    }
+                    else
+                    {
+                        _dir = Directory.CreateDirectory(_options.Value.Directory);
+                    }
+                }
+            }
         }
-
-        Directory.CreateDirectory(DirectoryPath);
     }
 
     public async Task<T?> LoadAsync<T>(string keyFormat, CancellationToken cancellationToken = default, params IEnumerable<object> keyParams)
     {
-        CheckDirectory();
-
         var fileName = string.Format(keyFormat, keyParams.ToArray());
         var filePath = Path.Combine(DirectoryPath!, $"{fileName}");
 
@@ -76,8 +99,6 @@ public sealed class FileSystemAcmeStore : IAcmeStore
 
     public async Task SaveAsync<T>(T value, string keyFormat, CancellationToken cancellationToken = default, params IEnumerable<object> keyParams)
     {
-        CheckDirectory();
-
         var fileName = string.Format(keyFormat, keyParams.ToArray());
         var filePath = Path.Combine(DirectoryPath!, $"{fileName}");
 
@@ -85,7 +106,7 @@ public sealed class FileSystemAcmeStore : IAcmeStore
             ? new FileStream(filePath, FileMode.Truncate, FileAccess.Write, FileShare.Read)
             : new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
 
-            
+
         _logger.LogDebug("Save file to {Path}", filePath);
 
         await JsonSerializer.SerializeAsync(fs, value, cancellationToken: cancellationToken);
@@ -98,7 +119,7 @@ public sealed class FileSystemAcmeStore : IAcmeStore
 
         var exists = File.Exists(filePath);
 
-        
+
         _logger.LogDebug("Exists file({Exists}): {Path}", exists, filePath);
 
         return Task.FromResult(exists);
@@ -106,8 +127,6 @@ public sealed class FileSystemAcmeStore : IAcmeStore
 
     public async Task<T?> LoadRawAsync<T>(string keyFormat, CancellationToken cancellationToken = default, params IEnumerable<object> keyParams)
     {
-        CheckDirectory();
-
         var fileName = string.Format(keyFormat, keyParams.ToArray());
         var filePath = Path.Combine(DirectoryPath!, $"{fileName}");
 
@@ -152,8 +171,6 @@ public sealed class FileSystemAcmeStore : IAcmeStore
 
     public async Task SaveRawAsync<T>(T value, string keyFormat, CancellationToken cancellationToken = default, params IEnumerable<object> keyParams)
     {
-        CheckDirectory();
-
         var fileName = string.Format(keyFormat, keyParams.ToArray());
         var filePath = Path.Combine(DirectoryPath!, $"{fileName}");
 
@@ -197,7 +214,7 @@ public sealed class FileSystemAcmeStore : IAcmeStore
         if (File.Exists(filePath))
         {
             File.Delete(filePath);
-            
+
             _logger.LogDebug("Removed from {Path}", filePath);
         }
 

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 
 using CertsCenter.Acme;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -21,11 +22,10 @@ public static class AlibabaCloudServiceCollectionExtensions
 {
     public static IServiceCollection AddAlibabaCloud(this IServiceCollection services)
     {
-        services.AddOptions<AlibabaCloudOptions>("AlibabaCloud");
-        services.AddOptions<AlibabaCloud.OpenApiClient.Models.Config>("AlibabaCloud");
+        services.ConfigureOptionsFromConfiguration<AlibabaCloud.OpenApiClient.Models.Config>("AlibabaCloud");
+
         services.AddScoped<AlibabaCloud.SDK.Alidns20150109.Client>(sp =>
         {
-            // var options = sp.GetRequiredService<IOptions<AlibabaCloudOptions>>().Value;
             var clientConfig = sp.GetRequiredService<IOptionsSnapshot<AlibabaCloud.OpenApiClient.Models.Config>>().Value;
             return new AlibabaCloud.SDK.Alidns20150109.Client(clientConfig);
         });
@@ -94,10 +94,13 @@ public class AliDnsChallengeProvider : IDnsChallengeProvider
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+
         var resp = await _client.DeleteDomainRecordAsync(new AlibabaCloud.SDK.Alidns20150109.Models.DeleteDomainRecordRequest
         {
             RecordId = context.Key,
         });
+
+        _logger.LogDebug("Delete domain record result: {@Response}", resp);
     }
 
     private (string rr, string rootDomainName) SplitDomainName(string domainName)

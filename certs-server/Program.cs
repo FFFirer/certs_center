@@ -106,6 +106,8 @@ try
     builder.Services
         .AddQuartz(quartz =>
         {
+            quartz.InterruptJobsOnShutdown = true;
+            quartz.InterruptJobsOnShutdownWithWait = true;
             quartz.AddJob<HandleTicketJob>(job =>
             {
                 job.WithIdentity(HandleTicketJob.JobKey).StoreDurably(true);
@@ -117,8 +119,6 @@ try
         })
         .AddCertsServerHostedService();
 
-    builder.Services
-        .AddOptions<AcmeOptions>("AcmeOptions");
     builder.Services
         .AddAcmeDefaults();
 

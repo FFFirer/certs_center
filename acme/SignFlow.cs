@@ -263,6 +263,7 @@ public class AcmeCertificateFactory
         _logger.LogInformation("Completing order {Url}", order.OrderUrl);
 
         var acme = await _clientFactory.Create(cancellationToken: cancellationToken);
+        
         // check all authorizations
         order = await acme.GetOrderDetailsAsync(order.OrderUrl, existing: order, cancellationToken);
 
@@ -473,43 +474,37 @@ public class AcmeCertificateFactory
 
         _logger.LogInformation("Start validate {DomainNames} ownership for {Authz} with {Count} DNS-01 challenge", domainName, authzDetailUrl, dnsChallenges.Count);
 
-        await Task.WhenAll(DoChallenges(dnsChallenges, authzDetailUrl, authz, domainName, cancellationToken));
+        await Task.WhenAll(dnsChallenges.Select(c => DoChallenges(c, authzDetailUrl, authz, domainName, cancellationToken)));
     }
 
-    private IEnumerable<Task> DoChallenges(IEnumerable<Challenge> dnsChallenges, string authzDetailUrl, Authorization authz, string domainName, CancellationToken cancellationToken)
+    private async Task DoChallenges(Challenge dnsChallenge, string authzDetailUrl, Authorization authz, string domainName, CancellationToken cancellationToken)
     {
-        foreach (var dnsChallenge in dnsChallenges)
+        if (dnsChallenge is null)
         {
-            if (dnsChallenge is null)
-            {
-                _logger.LogInformation("No 'dns-01' challenge for {Authz}: ", authzDetailUrl);
-                continue;
-            }
+            _logger.LogInformation("No 'dns-01' challenge for {Authz}", authzDetailUrl);
+            throw new InvalidOperationException($"No 'dns-01' challenge for {authzDetailUrl}");
+        }
 
-            yield return Task.Factory.StartNew(async () =>
-            {
-                _logger.LogInformation("Start challenge {Domain} using {ChallengeUrl} for {Authz} ", domainName, authzDetailUrl, dnsChallenge.Url);
+        _logger.LogInformation("Start challenge {Domain} using {ChallengeUrl} for {Authz} ", domainName, authzDetailUrl, dnsChallenge.Url);
 
-                using var scope = _serviceScopeFactory.CreateAsyncScope();
-                var acme = await (scope.ServiceProvider.GetRequiredService<AcmeClientFactory>()).Create(cancellationToken: cancellationToken);
+        using var scope = _serviceScopeFactory.CreateAsyncScope();
+        var acme = await (scope.ServiceProvider.GetRequiredService<AcmeClientFactory>()).Create(cancellationToken: cancellationToken);
 
-                var context = new DomainTxtRecordContext(domainName, string.Empty, string.Empty);
+        var context = new DomainTxtRecordContext(domainName, string.Empty, string.Empty);
 
-                try
-                {
-                    context = await PrepareDns01ChallengeResponseAsync(acme, authz, dnsChallenge, cancellationToken);
-                    await WaitForChallengeResultAsync(acme, authzDetailUrl, dnsChallenge, cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Challenge {Url} failed", dnsChallenge.Url);
-                    throw;
-                }
-                finally
-                {
-                    await _dnsChallengeProvider.RemoveTxtRecordAsync(context, cancellationToken);
-                }
-            }, cancellationToken);
+        try
+        {
+            context = await PrepareDns01ChallengeResponseAsync(acme, authz, dnsChallenge, cancellationToken);
+            await WaitForChallengeResultAsync(acme, authzDetailUrl, dnsChallenge, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Challenge {Url} failed", dnsChallenge.Url);
+            throw;
+        }
+        finally
+        {
+            await _dnsChallengeProvider.RemoveTxtRecordAsync(context, cancellationToken);
         }
     }
 
@@ -518,6 +513,7 @@ public class AcmeCertificateFactory
         var challengeUpdated = await acme.AnswerChallengeAsync(dnsChallenge.Url, cancellationToken);
 
         var testUtil = DateTime.Now.Add(TimeSpan.FromMinutes(10));
+
         while (!cancellationToken.IsCancellationRequested && DateTime.Now < testUtil)
         {
             var authzUpdated = await acme.GetAuthorizationDetailsAsync(authzDetailsUrl, cancellationToken);
@@ -542,6 +538,15 @@ public class AcmeCertificateFactory
         }
     }
 
+    /// <summary>
+    /// Prepare dns-01 challenge
+    /// </summary>
+    /// <param name="acme"></param>
+    /// <param name="authz"></param>
+    /// <param name="dnsChallenge"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
     private async Task<DomainTxtRecordContext> PrepareDns01ChallengeResponseAsync(AcmeProtocolClient acme, Authorization authz, Challenge dnsChallenge, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -574,7 +579,7 @@ public class AcmeCertificateFactory
     {
         var testUtil = DateTime.Now.Add(TimeSpan.FromMinutes(10));
 
-        while (!cancellationToken.IsCancellationRequested || DateTime.Now < testUtil)
+        while (!cancellationToken.IsCancellationRequested && DateTime.Now < testUtil)
         {
             string? err = null;
 
@@ -590,7 +595,7 @@ public class AcmeCertificateFactory
                 else if (dnsValues.Contains(context.Txt) == false)
                 {
                     var dnsValuesFlattened = string.Join(",", dnsValues);
-                    err = $"DNS entry does not match expected value for Challenge record name ({context.Domain} not in {dnsValuesFlattened})";
+                    err = $"DNS entry does not match expected '{context.Txt}' for Challenge record name s{context.Domain} not in ({dnsValuesFlattened})";
                 }
                 else
                 {

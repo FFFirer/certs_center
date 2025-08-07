@@ -15,11 +15,20 @@ public static class ServiceCollectionExtensions
             .AddAlibabaCloudDnsChallengeProvider();
     }
 
-
-    public static IServiceCollection AddOptionsBySectionPath<T>(this IServiceCollection services, string path)
-        where T : class
+    public static IServiceCollection ConfigureOptionsFromConfiguration<TOptions>(
+        this IServiceCollection services,
+        string sectionPath)
+        where TOptions : class
     {
-        return services.AddTransient<IConfigureOptions<T>>(sp => new ConfigureOptions<T>(options => sp.GetRequiredService<IConfiguration>().GetSection(path)?.Bind(options)));
+        services
+            .AddOptions<TOptions>()
+            .Configure((TOptions options, IServiceProvider sp) =>
+            {
+                sp.GetService<IConfiguration>()?.GetSection(sectionPath)?.Bind(options);
+
+            });
+
+        return services;
     }
 
     public static IServiceCollection AddAcme(this IServiceCollection services)
@@ -27,7 +36,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AcmeClientFactory>();
         services.AddScoped<AcmeCertificateFactory>();
 
-        services.AddOptionsBySectionPath<AcmeOptions>("Acme");
+        services.ConfigureOptionsFromConfiguration<AcmeOptions>("Acme");
 
         services.AddSingleton<IAcmeStore, FileSystemAcmeStore>();
         services.AddSingleton<ICertificateStore, X509StoreCertificateStore>();

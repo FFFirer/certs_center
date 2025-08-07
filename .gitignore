@@ -488,4 +488,4 @@ $RECYCLE.BIN/
 *.swp
 
 # Project
-# App_Data/certs.db
+App_Data/
