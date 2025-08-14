@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using System.Reflection.Emit;
 using System.Security.Cryptography.X509Certificates;
@@ -148,7 +149,8 @@ public class BeginCertificateCreation : SignFlowState
 
             _logger.LogInformation("Using account {UserId}", account.Id);
 
-            var certificate = await _certificateFactory.CreateCertificateAsync(_flowContext.Value.Request, cancellationToken);
+            var order = await _certificateFactory.GetOrCreateOrderAsync(_flowContext.Value.Request, null, true, cancellationToken);
+            var certificate = await _certificateFactory.CreateCertificateAsync(_flowContext.Value.Request, order, cancellationToken);
 
             _logger.LogInformation("Created certificate {Subject} {Thumbprint}", certificate.Subject, certificate.Thumbprint);
 
@@ -243,19 +245,56 @@ public class AcmeCertificateFactory
         return await _clientFactory.GetOrCreateAccountAsync(cancellationToken);
     }
 
-    public async Task<X509Certificate2> CreateCertificateAsync(CertificateRequest request, CancellationToken cancellationToken)
+    public async Task<X509Certificate2> CreateCertificateAsync(CertificateRequest request, OrderDetails order, CancellationToken cancellationToken)
     {
-        var acme = await _clientFactory.Create(cancellationToken: cancellationToken);
-
-        cancellationToken.ThrowIfCancellationRequested();
-        var order = await acme.CreateOrderAsync(request.Domains.Distinct(), cancel: cancellationToken);
-
         var authUrls = order.Payload.Authorizations;
         cancellationToken.ThrowIfCancellationRequested();
         await Task.WhenAll(BeginValidateAllAuthorizations(authUrls, cancellationToken));
 
         cancellationToken.ThrowIfCancellationRequested();
         return await CompleteCertificateRequestAsync(order, request, cancellationToken);
+    }
+
+    public async Task<X509Certificate2> CreateCertificateAsync(CertificateRequest request, string? orderUrl, CancellationToken cancellationToken)
+    {
+        var acme = await _clientFactory.Create(cancellationToken: cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var order = await GetOrCreateOrderAsync(request, orderUrl, true, cancellationToken);
+
+        if (order is null)
+        {
+            throw new InvalidOperationException("Order is null: '" + orderUrl + "'");
+        }
+
+        return await CreateCertificateAsync(request, order, cancellationToken);
+    }
+
+    public async Task<OrderDetails> GetOrCreateOrderAsync(CertificateRequest request, string? orderUrl, bool reCreateIfInvalid, CancellationToken cancellationToken)
+    {
+        var acme = await _clientFactory.Create(cancellationToken: cancellationToken);
+
+        OrderDetails? order = null;
+
+        if (string.IsNullOrWhiteSpace(orderUrl))
+        {
+            order = await acme.CreateOrderAsync(request.Domains.Distinct(), cancel: cancellationToken);
+            _logger.LogInformation("Created order: {OrderUrl}", order.OrderUrl);
+        }
+        else
+        {
+            order = await acme.GetOrderDetailsAsync(orderUrl, null, cancellationToken);
+            _logger.LogInformation("Loaded order: {OrderUrl}", orderUrl);
+        }
+
+        if (reCreateIfInvalid && order is null || order.Payload.Status == AcmeConst.InvalidStatus)
+        {
+            order = await acme.CreateOrderAsync(request.Domains.Distinct(), cancel: cancellationToken);
+            _logger.LogInformation("Created order: {OrderUrl}", order.OrderUrl);
+        }
+
+        return order;
     }
 
     private async Task<X509Certificate2> CompleteCertificateRequestAsync(OrderDetails order, CertificateRequest request, CancellationToken cancellationToken)

@@ -23,7 +23,8 @@ public class CertsServerDbContext : DbContext
     }
 
     public DbSet<TicketEntity> Tickets => Set<TicketEntity>();
-    public DbSet<TicketCertificateEntity> TicketCertificates => Set<TicketCertificateEntity>();
+    // public DbSet<TicketCertificateEntity> TicketCertificates => Set<TicketCertificateEntity>();
+    public DbSet<TicketOrderEntity> TicketOrders => Set<TicketOrderEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

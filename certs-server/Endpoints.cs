@@ -109,19 +109,22 @@ public static class TicketHttpHandlers
         [FromServices] CertsServerDbContext certDbContext,
         CancellationToken cancellationToken)
     {
-        var ticketCertificate = await certDbContext.TicketCertificates.FindAsync(id, cancellationToken);
-        if (ticketCertificate is null)
+        var ticketOrder = await certDbContext.TicketOrders.Where(x => x.TicketId == id && x.Deleted == false)
+            .OrderByDescending(x => x.CreatedTime)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (ticketOrder?.Certificate is null)
         {
             return TypedResults.NotFound();
         }
 
-        var certificate = await store.FindAsync(ticketCertificate.Path, cancellationToken);
+        var certificate = await store.FindAsync(ticketOrder.Certificate.Path, cancellationToken);
         if (certificate is null)
         {
             return TypedResults.NotFound();
         }
 
-        var ticket = await certDbContext.Tickets.FindAsync(ticketCertificate.TicketId, cancellationToken);
+        var ticket = await certDbContext.Tickets.FindAsync(id, cancellationToken);
         var fileBytes = certificate.Export(X509ContentType.Pkcs12, ticket?.PfxPassword);
 
         return TypedResults.File(fileBytes, "application/octet-stream", certificate.Thumbprint + ".pfx");
