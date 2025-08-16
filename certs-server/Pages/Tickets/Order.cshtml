@@ -17,4 +17,7 @@
         <a class="ds-btn ds-btn-primary" target="_blank" href="/api/ticket/order/@Model.TicketOrder.Id/cert/download?type=pfx">Download PFX</a>
         <a class="ds-btn ds-btn-primary" target="_blank" href="/api/ticket/order/@Model.TicketOrder.Id/cert/download?type=pem">Download PEM</a>
     }
+    <form method="post" asp-page-handler="RefreshExpires">
+        <button type="submit" class="ds-btn ds-btn-primary">Refresh Expires</button>
+    </form>
 </div>

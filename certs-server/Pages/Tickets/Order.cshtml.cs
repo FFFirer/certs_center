@@ -1,3 +1,5 @@
+using System.Security.Cryptography.X509Certificates;
+
 using CertsServer.Data;
 using CertsServer.Services;
 
@@ -52,5 +54,31 @@ public class TicketOrderModel : PageModel
         };
 
         return File(bytes, "application/octet-stream", $"{ticketOrder.Id}{fileExt}");
+    }
+
+    public async Task<IActionResult> OnPostRefreshExpiresAsync([FromRoute] long id)
+    {
+        var ticketOrder = await _db.TicketOrders.FindAsync([id], this.HttpContext.RequestAborted);
+
+        if (ticketOrder is null)
+        {
+            return NotFound();
+        }
+
+        var fileBytes = await _export.GetPem(ticketOrder.TicketId, ticketOrder.Id, this.HttpContext.RequestAborted);
+
+        if (fileBytes is null)
+        {
+            return NotFound();
+        }
+
+        using var cert = X509CertificateLoader.LoadCertificate(fileBytes);
+
+        ticketOrder.Expires = cert.NotAfter;
+        ticketOrder.LastUpdatedTime = DateTimeOffset.UtcNow;
+
+        await _db.SaveChangesAsync(this.HttpContext.RequestAborted);
+
+        return RedirectToPage();
     }
 }

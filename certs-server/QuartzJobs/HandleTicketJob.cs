@@ -155,7 +155,7 @@ public class HandleTicketJob : IJob
             order = await certificateFactory.GetOrderAsync(ticketOrder.OrderUrl, order, context.CancellationToken);
             var path = await certificateStore.SaveAsync(certificate, context.CancellationToken);
 
-            ticketOrder.Expires = DateTimeOffset.Parse(order.Payload.Expires);
+            ticketOrder.Expires = certificate.NotAfter;
             ticketOrder.Certificate = new TicketCertificateEntity(path, ticketOrder.Id, ticketId, TicketCertificateStatus.Active, certificate.NotBefore, certificate.NotAfter)
             {
                 AcmeOrderUrl = order.OrderUrl
