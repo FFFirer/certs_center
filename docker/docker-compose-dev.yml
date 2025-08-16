@@ -14,7 +14,7 @@ services:
   migrations:
     container_name: migrations
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile.cli
     volumes: *certs-volumes
     environment: 
@@ -25,7 +25,7 @@ services:
   web:
     container_name: certs_web
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
     volumes: *certs-volumes
     environment: 
