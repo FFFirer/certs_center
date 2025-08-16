@@ -1,0 +1,20 @@
+@page "{id:long}"
+@model TicketOrderModel
+
+@{
+    ViewData["Title"] = "Ticket Order";
+}
+
+<h2 class="text-2xl">@ViewData["Title"]</h2>
+
+<p>Id: @Model.TicketOrder?.Id</p>
+<p>Order Url: @Model.TicketOrder?.OrderUrl</p>
+<p>Expires: @Model.TicketOrder?.Expires?.ToString()</p>
+<p>CreatedTime: @Model.TicketOrder?.Certificate?.CreatedTime.ToString()</p>
+
+<div class="flex gap-1">
+    @if(Model.TicketOrder is not null) {
+        <a class="ds-btn ds-btn-primary" target="_blank" href="/api/ticket/order/@Model.TicketOrder.Id/cert/download?type=pfx">Download PFX</a>
+        <a class="ds-btn ds-btn-primary" target="_blank" href="/api/ticket/order/@Model.TicketOrder.Id/cert/download?type=pem">Download PEM</a>
+    }
+</div>

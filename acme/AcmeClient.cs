@@ -46,17 +46,17 @@ public class AcmeClientFactory : IDisposable
 
         await GetOrCreateAccountAsync(cancellationToken);
 
-        if (refresh)
-        {
-            _client = await CreateClient(refresh, cancellationToken).ConfigureAwait(false);
-        }
+        //if (refresh)
+        //{
+        //    _client = await CreateClient(refresh, cancellationToken).ConfigureAwait(false);
+        //}
 
-        if (_client is null)
-        {
-            _client = await CreateClient(refresh, cancellationToken).ConfigureAwait(false);
-        }
+        //if (_client is null)
+        //{
+        //    _client = await CreateClient(refresh, cancellationToken).ConfigureAwait(false);
+        //}
 
-        return _client;
+        return await CreateClient(refresh,  cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<AcmeProtocolClient> CreateClient(bool refresh, CancellationToken cancellationToken)

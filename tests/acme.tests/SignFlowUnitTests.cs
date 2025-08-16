@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography.X509Certificates;
 
 using AutoFixture;
 
@@ -60,8 +61,20 @@ public class SignFlowUnitTests
 
         var id = Guid.Empty;
 
-        var cert = await certFactory.CreateCertificateAsync(new CertificateRequest(id, ["test.fffirer.top"]), default);
+        var request = new CertificateRequest(0, id, ["test.fffirer.top"]);
+        var order = await certFactory.GetOrCreateOrderAsync(request, null, true, default);
+        var cert = await certFactory.CreateCertificateAsync(request, order, default);
+
+        // workaround for https://github.com/dotnet/aspnetcore/issues/21183
+        using var chain = new X509Chain
+        {
+            ChainPolicy =
+                {
+                    RevocationMode = X509RevocationMode.NoCheck
+                }
+        };
 
         Assert.NotNull(cert);
+        Assert.True(chain.Build(cert));
     }
 }

@@ -1,6 +1,6 @@
 @page
 @model IndexModel
- 
+
 @{
     ViewData["Title"] = "Home";
 }
@@ -21,26 +21,37 @@
             </tr>
         </thead>
         <tbody>
-            @if(Model.Tickets.IsNullOrEmpty()){
+            @if (Model.Tickets.IsNullOrEmpty())
+            {
                 <tr>
                     <td colspan="5">
                         No Data
                     </td>
                 </tr>
             }
-            else {
-                foreach(var t in Model.Tickets){
+            else
+            {
+                foreach (var t in Model.Tickets)
+                {
                     <tr>
                         <td>@t.CreatedTime</td>
                         <td>@t.Id</td>
                         <td>@t.Status</td>
                         <td>@string.Join(",", t.Domains ?? [])</td>
                         <td>
-                            @if(t.Status != Data.TicketStatus.Deleted) {
+                            @if (t.Status != Data.TicketStatus.Deleted)
+                            {
                                 <form method="post" asp-page-handler="Delete" asp-route-id="@t.Id">
                                     <button type="submit" class="ds-btn ds-btn-xs ds-btn-warning">DELETE</button>
                                 </form>
                             }
+                            @if (t.Status == Data.TicketStatus.Finished)
+                            {
+                                <form method="post" asp-page-handler="Download" asp-route-id="@t.Id">
+                                    <button type="submit" class="ds-btn ds-btn-xs ds-btn-warning">Download</button>
+                                </form>
+                            }
+                            <a class="ds-btn ds-btn-info ds-btn-xs" asp-page="/Tickets/History" asp-route-id="@t.Id">HISTORY</a>
                         </td>
                     </tr>
                 }

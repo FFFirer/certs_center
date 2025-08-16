@@ -56,23 +56,19 @@
   </ItemGroup>
 
   <!-- Ensure Node environment on Build -->
-  <Target Name="DebugEnsureNodeEnv" BeforeTargets="Build;PublishBuildAssets"
-    Condition=" !Exists('Assets\node_modules') ">
+  <Target Name="DebugEnsureNodeEnv" BeforeTargets="Build;PublishBuildAssets" Condition=" !Exists('Assets\node_modules') ">
     <!-- Ensure Node.js is installed -->
     <Exec Command="node --version" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="ErrorCode" />
     </Exec>
-    <Error Condition="'$(ErrorCode)' != '0'"
-      Text="Node.js is required to build and run this project. To continue, please install Node.js from https://nodejs.org/, and then restart your command prompt or IDE." />
-    <Message Importance="high"
-      Text="Restoring dependencies using 'npm'. This may take several minutes..." />
+    <Error Condition="'$(ErrorCode)' != '0'" Text="Node.js is required to build and run this project. To continue, please install Node.js from https://nodejs.org/, and then restart your command prompt or IDE." />
+    <Message Importance="high" Text="Restoring dependencies using 'npm'. This may take several minutes..." />
     <!-- Install Node packages -->
     <Exec Command="pnpm install" />
   </Target>
 
   <!-- Build the final assets -->
-  <Target Name="PublishBuildAssets" BeforeTargets="Rebuild;Build;ResolveProjectStaticWebAssets"
-    Condition=" '$(Configuration)' == 'Release' ">
+  <Target Name="PublishBuildAssets" BeforeTargets="Rebuild;Build;ResolveProjectStaticWebAssets" Condition=" '$(Configuration)' == 'Release' ">
     <ItemGroup>
       <Content Remove="wwwroot\dist\**\*" />
     </ItemGroup>

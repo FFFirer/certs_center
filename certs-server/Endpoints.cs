@@ -1,6 +1,7 @@
 ﻿using CertsServer.Acme;
 using CertsServer.Data;
 using CertsServer.QuartzJobs;
+using CertsServer.Services;
 
 using LettuceEncrypt;
 
@@ -31,27 +32,30 @@ public static class Endpoints
         apis.MapGet("/ticket/all", TicketHttpHandlers.ListAll);
         apis.MapGet("/ticket/{id:guid}", TicketHttpHandlers.Get);
         apis.MapGet("/ticket/{id:guid}/plan", TicketHttpHandlers.GetPlanInfo);
-        apis.MapGet("/vite-manifest", (IViteManifest vitemanifest, IOptions<ViteOptions> viteOptions) =>
-        {
-            var manifest = vitemanifest.Select(x => new
-            {
-                x.Src,
-                x.IsEntry,
-                x.IsDynamicEntry,
-                x.File,
-                x.Css,
-                x.Assets,
-                x.DynamicImports
-            });
 
-            return new
-            {
-                manifest,
-                viteOptions.Value,
+        // apis.MapGet("/vite-manifest", (IViteManifest vitemanifest, IOptions<ViteOptions> viteOptions) =>
+        // {
+        //     var manifest = vitemanifest.Select(x => new
+        //     {
+        //         x.Src,
+        //         x.IsEntry,
+        //         x.IsDynamicEntry,
+        //         x.File,
+        //         x.Css,
+        //         x.Assets,
+        //         x.DynamicImports
+        //     });
 
-            };
-        });
-        apis.MapGet("/vite-manifest/test", TestViteManifest);
+        //     return new
+        //     {
+        //         manifest,
+        //         viteOptions.Value,
+
+        //     };
+        // });
+        // apis.MapGet("/vite-manifest/test", TestViteManifest);
+
+        apis.MapGet("/ticket/order/{id:long}/cert/download", TicketHttpHandlers.DownloadCertificate);
 
         return apis;
     }
@@ -76,7 +80,7 @@ public static class Endpoints
     }
 }
 
-public record TicketDto(Guid Id, DateTimeOffset CreatedTime, TicketStatus Status, string? Remark, string[]? Domains, CertificateDto[] Certificates);
+public record TicketDto(Guid Id, DateTimeOffset CreatedTime, TicketStatus Status, string? Remark, string[]? Domains);
 public record CertificateDto(Guid Id, string Path, TicketCertificateStatus Status, DateTime? NotBefore, DateTime? NotAfter, DateTimeOffset CreatedTime);
 
 public static class TicketHttpHandlers
@@ -92,14 +96,42 @@ public static class TicketHttpHandlers
             x.CreatedTime,
             x.Status,
             x.Remark,
-            x.DomainNames,
-            x.Certificates.Select(c => new CertificateDto(
-                c.Id,
-                c.Path,
-                c.Status,
-                c.NotBefore,
-                c.NotAfter,
-                c.CreatedTime)).ToArray())).ToList();
+            x.DomainNames)).ToList();
+    }
+
+    [OpenApiOperation("TicketOrderCertificate_Download", "", "")]
+    public static async Task<Results<FileContentHttpResult, NotFound>> DownloadCertificate(
+        [FromRoute] long id,
+        [FromQuery] string? type,
+        [FromServices] CertsServerDbContext db,
+        [FromServices] TicketOrderExportService exportService, CancellationToken cancellationToken)
+    {
+        var ticketOrder = await db.TicketOrders.FindAsync([id], cancellationToken);
+        if (ticketOrder is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var bytes = type switch
+        {
+            "pfx" => await exportService.GetPfx(ticketOrder.TicketId, ticketOrder.Id, cancellationToken),
+            "pem" => await exportService.GetPem(ticketOrder.TicketId, ticketOrder.Id, cancellationToken),
+            _ => throw new NotSupportedException($"Not supported export type: {type}")
+        };
+
+        if (bytes is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var fileExt = type switch
+        {
+            "pfx" => ".pfx",
+            "pem" => ".pem",
+            _ => ""
+        };
+
+        return TypedResults.File(bytes, "application/octet-stream", $"{ticketOrder.TicketId:N}-{ticketOrder.Id}{fileExt}");
     }
 
     [OpenApiOperation("Ticket_Get", "获取Ticket", "")]
@@ -107,9 +139,19 @@ public static class TicketHttpHandlers
         [FromRoute] Guid id,
         [FromServices] ICertificateStore store,
         [FromServices] CertsServerDbContext certDbContext,
+        [FromServices] TicketOrderExportService exportService,
         CancellationToken cancellationToken)
     {
-        var ticketOrder = await certDbContext.TicketOrders.Where(x => x.TicketId == id && x.Deleted == false)
+        var ticket = await certDbContext
+            .Tickets.FindAsync([id], cancellationToken);
+
+        if (ticket is null || ticket.Status != TicketStatus.Finished)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var ticketOrder = await certDbContext
+            .TicketOrders.Where(x => x.TicketId == id && x.Deleted == false)
             .OrderByDescending(x => x.CreatedTime)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -118,16 +160,7 @@ public static class TicketHttpHandlers
             return TypedResults.NotFound();
         }
 
-        var certificate = await store.FindAsync(ticketOrder.Certificate.Path, cancellationToken);
-        if (certificate is null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var ticket = await certDbContext.Tickets.FindAsync(id, cancellationToken);
-        var fileBytes = certificate.Export(X509ContentType.Pkcs12, ticket?.PfxPassword);
-
-        return TypedResults.File(fileBytes, "application/octet-stream", certificate.Thumbprint + ".pfx");
+        return await DownloadCertificate(ticketOrder.Id, "pfx", certDbContext, exportService, cancellationToken);
     }
 
     [OpenApiOperation("Ticket_GetPlanInfo", "获取Ticket信息", "")]

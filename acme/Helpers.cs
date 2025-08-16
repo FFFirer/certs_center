@@ -5,6 +5,8 @@ using System.Text;
 using DnsClient;
 using DnsClient.Protocol;
 
+using Microsoft.Extensions.Configuration;
+
 namespace CertsCenter.Acme;
 
 public static class AcmeHelper
@@ -29,7 +31,9 @@ internal static class EnumerableExtensions
 
 public static class DnsUtil
 {
-    public static string[] DnsServers = ["114.114.114.114", "1.1.1.1"];
+    public static void Configure(IConfiguration configuration) => configuration?.GetSection(nameof(DnsServers))?.Bind(DnsServers);
+
+    public static string[] DnsServers = [];
 
     private static readonly Lazy<LookupClient> _Client = new Lazy<LookupClient>(() => BuildLookupClient(DnsServers));
 

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using System.Reflection.Emit;
+using System.Reflection.Metadata;
 using System.Security.Cryptography.X509Certificates;
 
 using ACMESharp;
@@ -221,23 +222,32 @@ public interface IDnsChallengeProvider
     Task<DomainTxtRecordContext> AddDomainTxtRecordAsync(string acmeDomain, string txtRecord, CancellationToken cancellationToken);
 }
 
+public enum ExportCertType
+{
+    Pfx,
+    Pem
+}
+
 public class AcmeCertificateFactory
 {
     private readonly ILogger _logger;
     private readonly AcmeClientFactory _clientFactory;
     private readonly IDnsChallengeProvider _dnsChallengeProvider;
     private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly IAcmeStore _acmeStore;
 
     public AcmeCertificateFactory(
         IDnsChallengeProvider dnsChallengeProvider,
         IServiceScopeFactory serviceScopeFactory,
         ILogger<AcmeCertificateFactory> logger,
-        AcmeClientFactory clientFactory)
+        AcmeClientFactory clientFactory,
+        IAcmeStore acmeStore)
     {
         _serviceScopeFactory = serviceScopeFactory;
         _dnsChallengeProvider = dnsChallengeProvider;
         _logger = logger;
         _clientFactory = clientFactory;
+        _acmeStore = acmeStore;
     }
 
     public async Task<Account> GetOrCreateAccountAsync(CancellationToken cancellationToken)
@@ -302,7 +312,7 @@ public class AcmeCertificateFactory
         _logger.LogInformation("Completing order {Url}", order.OrderUrl);
 
         var acme = await _clientFactory.Create(cancellationToken: cancellationToken);
-        
+
         // check all authorizations
         order = await acme.GetOrderDetailsAsync(order.OrderUrl, existing: order, cancellationToken);
 
@@ -311,7 +321,7 @@ public class AcmeCertificateFactory
 
         order = await acme.FinalizeOrderAsync(order.Payload.Finalize, certCsr, cancellationToken);
 
-        _logger.LogInformation("Has request to finalize order {Url}", order.OrderUrl);
+        _logger.LogInformation("Finalizing order {Url}", order.OrderUrl);
 
         var testUtil = DateTime.Now.Add(TimeSpan.FromMinutes(10));
 
@@ -320,7 +330,7 @@ public class AcmeCertificateFactory
             if (order.Payload.Status == AcmeConst.ValidStatus)
             {
                 _logger.LogInformation("Order {Url} is valid", order.OrderUrl);
-                SaveOrderWithPkiKeyPair(order, keyPair);
+                await SaveOrderWithPkiKeyPair(request, order, keyPair, default); // 因为密钥对已经用于Finalize，所以保存KeyPair大部分情况不应被打断
                 break;
             }
 
@@ -332,7 +342,7 @@ public class AcmeCertificateFactory
 
             if (DateTime.Now < testUtil)
             {
-                _logger.LogDebug("Wait for check order {OrderUrl} status ...5s Current: {Status}", order.OrderUrl, order.Payload.Status);
+                _logger.LogDebug("Checking order status {OrderUrl} waiting for 5s... Current: {Status}", order.OrderUrl, order.Payload.Status);
                 await Task.Delay(TimeSpan.FromSeconds(5));
                 order = await acme.GetOrderDetailsAsync(order.OrderUrl, order, cancellationToken);
             }
@@ -340,11 +350,11 @@ public class AcmeCertificateFactory
 
         _logger.LogInformation("Completed order {Url}", order.OrderUrl);
 
-        var cert = await ExportPfx(acme, order, keyPair, request.PfxPassword, cancellationToken);
+        var certBytes = await LoadOrderCert(request, order, cancellationToken);
 
-        _logger.LogInformation("Exported order {Url}: PFX", order.OrderUrl);
+        _logger.LogInformation("Exported certificate for order {Url}", order.OrderUrl);
 
-        return cert;
+        return X509CertificateLoader.LoadCertificate(certBytes);
     }
 
     /// <summary>
@@ -390,6 +400,82 @@ public class AcmeCertificateFactory
         return certCsr;
     }
 
+    public async Task<byte[]> Export(CertificateRequest request, string orderUrl, ExportCertType exportCertType, CancellationToken cancellationToken)
+    {
+        return exportCertType switch
+        {
+            ExportCertType.Pfx => await ExportPfx(request, orderUrl, cancellationToken),
+            ExportCertType.Pem => await ExportPem(request, orderUrl, cancellationToken),
+            _ => throw new NotSupportedException($"Not supported export type: {exportCertType}")
+        };
+    }
+
+    public async Task<byte[]> ExportPfx(CertificateRequest request, string orderUrl, CancellationToken cancellationToken)
+    {
+        var acme = await _clientFactory.Create(false, cancellationToken);
+        var order = await acme.GetOrderDetailsAsync(orderUrl, null, cancellationToken);
+        if (order.Payload.Status != AcmeConst.ValidStatus)
+        {
+            throw new InvalidOperationException($"Order status for id: {request.Id} is not valid");
+        }
+
+        var keyPair = await LoadOrderKeyPair(request, order, cancellationToken);
+        var certBytes = await LoadOrderCert(request, order, cancellationToken);
+
+        var pfxPassword = request.PfxPassword;
+        if (string.IsNullOrWhiteSpace(pfxPassword))
+        {
+            pfxPassword = null;
+        }
+
+        using var cert = X509CertificateLoader.LoadCertificate(certBytes);
+        var pkiCert = PkiCertificate.From(cert);
+        var pfx = pkiCert.Export(PkiArchiveFormat.Pkcs12,
+            privateKey: keyPair.PrivateKey,
+            password: pfxPassword?.ToCharArray());
+
+        return pfx;
+    }
+
+    private async Task<byte[]> LoadOrderCert(CertificateRequest request, OrderDetails order, CancellationToken cancellationToken)
+    {
+        if (await _acmeStore.ExistsAsync(AcmeStoreKeys.AcmeOrderCert, cancellationToken, request.Id))
+        {
+            return (await _acmeStore.LoadRawAsync<byte[]>(AcmeStoreKeys.AcmeOrderCert, cancellationToken, request.Id))!;
+        }
+
+        var acme = await _clientFactory.Create(false, cancellationToken);
+        var certBytes = await GetOrderCertificate(acme, order, cancellationToken);
+
+        await _acmeStore.SaveRawAsync(certBytes, AcmeStoreKeys.AcmeOrderCert, cancellationToken, request.Id);
+        return certBytes;
+    }
+
+    private async Task<byte[]> ExportPem(CertificateRequest request, string orderUrl, CancellationToken cancellationToken)
+    {
+        var acme = await _clientFactory.Create(false, cancellationToken);
+        var order = await acme.GetOrderDetailsAsync(orderUrl, null, cancellationToken);
+        if (order.Payload.Status != AcmeConst.ValidStatus)
+        {
+            throw new InvalidOperationException($"Order status for order: {request.Id} is not valid");
+        }
+
+        var certBytes = await LoadOrderCert(request, order, cancellationToken);
+
+        return certBytes;
+    }
+
+    private async Task<PkiKeyPair> LoadOrderKeyPair(CertificateRequest request, OrderDetails order, CancellationToken cancellationToken)
+    {
+        var certKey = await _acmeStore.LoadRawAsync<string>(AcmeStoreKeys.AcmeOrderCertKey, cancellationToken, request.Id);
+        if (certKey is null)
+        {
+            throw new InvalidOperationException($"Certkey for request-id: {request.Id} not exists");
+        }
+
+        return Base64ToPkiKeyPair(certKey);
+    }
+
     /// <summary>
     /// 生成PFX
     /// </summary>
@@ -402,7 +488,6 @@ public class AcmeCertificateFactory
     public static async Task<X509Certificate2> ExportPfx(AcmeProtocolClient acme, OrderDetails order, PkiKeyPair keyPair, string? pfxPassword, CancellationToken cancellationToken)
     {
         var certBytes = await GetOrderCertificate(acme, order, cancellationToken);
-
         return ExportPfx(certBytes, keyPair, pfxPassword, cancellationToken);
     }
 
@@ -440,9 +525,10 @@ public class AcmeCertificateFactory
         return certBytes;
     }
 
-    public virtual void SaveOrderWithPkiKeyPair(OrderDetails order, PkiKeyPair keyPair)
+    public virtual async Task SaveOrderWithPkiKeyPair(CertificateRequest request, OrderDetails order, PkiKeyPair keyPair, CancellationToken cancellationToken)
     {
-
+        var certKeys = PkiKeyPairToBase64(keyPair);
+        await _acmeStore.SaveRawAsync(certKeys, AcmeStoreKeys.AcmeOrderCertKey, cancellationToken, request.Id);
     }
 
     /// <summary>
@@ -661,6 +747,14 @@ public class AcmeCertificateFactory
                 _logger.LogInformation("Waiting for validate challenge...5s");
             }
         }
+    }
+
+    public async Task<OrderDetails> GetOrderAsync(string orderUrl, OrderDetails? existsing, CancellationToken cancellationToken)
+    {
+        var acme = await _clientFactory.Create(cancellationToken: cancellationToken);
+        var order = await acme.GetOrderDetailsAsync(orderUrl, existsing, cancellationToken);
+     
+        return order;
     }
 }
 

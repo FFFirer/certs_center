@@ -33,9 +33,10 @@ public class AccountKey(string keyType, string keyExport)
     }
 }
 
-public class CertificateRequest(Guid id, string[] domains)
+public class CertificateRequest(long id, Guid orderId, string[] domains)
 {
-    public Guid Id { get; } = id;
+    public long Id { get; } = id;
+    public Guid OrderId { get; } = orderId;
     public string[] Domains { get; } = domains;
 
     public string? PfxPassword { get; set; }

@@ -28,6 +28,22 @@ namespace CertsServer.Pages.QuartzAdmin
                 x => new TriggerDto(x.Key, x.JobKey, x.GetPreviousFireTimeUtc()?.LocalDateTime, x.GetNextFireTimeUtc()?.LocalDateTime)).ToList();
         }
 
+        public async Task<IActionResult> OnPostExecuteNowAsync(Guid ticketId, string name, string group)
+        {
+            var jobkey = new JobKey(name, group);
+            var schd = await _schedulerFactory.GetScheduler(this.HttpContext.RequestAborted);
+
+            await schd.TriggerJob(
+                jobkey,
+                new JobDataMap
+                {
+                    { HandleTicketJob.DataMapKeys.TicketId, ticketId}
+                },
+                this.HttpContext.RequestAborted);
+
+            return RedirectToPage();
+        }
+
         public List<TriggerDto> Triggers { get; set; } = [];
 
 

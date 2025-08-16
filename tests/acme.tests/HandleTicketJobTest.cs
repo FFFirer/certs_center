@@ -80,12 +80,13 @@ public class HandleTicketJobTest
         using (var assertScope = serviceProvider.CreateAsyncScope())
         {
             var db = assertScope.ServiceProvider.GetRequiredService<CertsServerDbContext>();
-            var ticket = await db.Tickets.Where(x => x.Id == CONST_TICKET_ID).Include(x => x.Certificates).FirstOrDefaultAsync();
+            var ticket = await db.Tickets.Where(x => x.Id == CONST_TICKET_ID).FirstOrDefaultAsync();
+            var ticketOrder = await db.TicketOrders.Where(x => x.TicketId == CONST_TICKET_ID).OrderByDescending(x => x.CreatedTime).FirstOrDefaultAsync();
 
             Assert.NotNull(ticket);
             Assert.Equal(Data.TicketStatus.Finished, ticket.Status);
-            Assert.NotEmpty(ticket.Certificates);
-            Assert.All(ticket.Certificates, a => Assert.Equal(TicketCertificateStatus.Active, a.Status));
+            Assert.NotNull(ticketOrder?.Certificate);
+            Assert.Equal(TicketCertificateStatus.Active, ticketOrder?.Certificate?.Status);
         }
     }
 }

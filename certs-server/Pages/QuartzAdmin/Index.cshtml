@@ -15,6 +15,7 @@
                 <th>Job Name</th>
                 <th>Previous Fire Time</th>
                 <th>Next Fire Time</th>
+                <th>Operations</th>
             </tr>
         </thead>
         <tbody>
@@ -36,6 +37,14 @@
                         </td>
                         <td>
                             @item.NextFireTime
+                        </td>
+                        <td>
+                            <form method="post" asp-page-handler="ExecuteNow">
+                                <input type="hidden" name="name" value="@item.JobKey.Name" />
+                                <input type="hidden" name="group" value="@item.JobKey.Group" />
+                                <input type="hidden" name="ticketId" value="@item.Key.Name" />
+                                <button type="submit" class="ds-btn ds-btn-primary ds-btn-xs">EXECUTE NOW</button>
+                            </form>
                         </td>
                     </tr>
                 }

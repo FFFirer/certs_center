@@ -37,15 +37,8 @@ public class TicketEntity
     public DateTimeOffset UpdatedTime { get; set; }
     public string? Remark { get; set; }
 
-    public ICollection<TicketCertificateEntity> Certificates { get; set; } = [];
-
-    public void Finished(TicketCertificateEntity? certificate = default)
+    public void Finished()
     {
-        if (certificate is not null)
-        {
-            Certificates.Add(certificate);
-        }
-
         Status = TicketStatus.Finished;
         Remark = string.Empty;
         UpdatedTime = DateTimeOffset.UtcNow;
@@ -118,12 +111,19 @@ public class TicketOrderEntity
 
     public TicketCertificateEntity? Certificate { get; set; }
 
+    public DateTimeOffset? Expires { get; set; }
+
     public bool Deleted { get; set; } = false;
 
     internal void Delete()
     {
         Deleted = true;
         LastUpdatedTime = DateTimeOffset.UtcNow;
+    }
+
+    internal bool Expired()
+    {
+        return Expires.HasValue && Expires.Value < DateTimeOffset.UtcNow;
     }
 }
 

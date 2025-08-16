@@ -1,3 +1,4 @@
+using CertsServer.Acme;
 using CertsServer.Events;
 
 using MediatR;
@@ -14,18 +15,20 @@ public class IndexModel : PageModel
 {
     private readonly CertsServerDbContext _db;
     private readonly IPublisher _publisher;
+    private readonly ICertificateStore _store;
 
-    public IndexModel(CertsServerDbContext db, IPublisher publisher)
+    public IndexModel(CertsServerDbContext db, IPublisher publisher, ICertificateStore store)
     {
         _db = db;
         _publisher = publisher;
+        _store = store;
     }
 
     public List<TicketDto> Tickets { get; set; } = [];
 
     public async Task OnGetAsync()
     {
-        var tickets = await _db.Tickets.AsNoTracking().Include(x => x.Certificates).ToListAsync(this.HttpContext.RequestAborted);
+        var tickets = await _db.Tickets.AsNoTracking().ToListAsync(this.HttpContext.RequestAborted);
         Tickets = tickets
             .OrderByDescending(x => x.CreatedTime)
             .Select(
@@ -34,15 +37,7 @@ public class IndexModel : PageModel
                     t.CreatedTime,
                     t.Status,
                     t.Remark,
-                    t.DomainNames,
-                    t.Certificates?.Select(
-                        x => new CertificateDto(
-                            x.Id,
-                            x.Path,
-                            x.Status,
-                            x.NotBefore,
-                            x.NotAfter,
-                            x.CreatedTime))?.ToArray() ?? []))
+                    t.DomainNames))
             .ToList();
     }
 
@@ -59,5 +54,25 @@ public class IndexModel : PageModel
         }
 
         return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostDownloadAsync(Guid id)
+    {
+        var ticket = await _db.Tickets.FindAsync([id], this.HttpContext.RequestAborted);
+        if (ticket is null)
+        {
+            return NotFound();
+        }
+
+        var latestOrder = await _db.TicketOrders.Where(x => x.TicketId == id && x.Deleted == false)
+        .OrderByDescending(x => x.CreatedTime)
+        .FirstOrDefaultAsync(this.HttpContext.RequestAborted);
+
+        if (latestOrder?.Certificate is null)
+        {
+            return NotFound();
+        }
+
+        return RedirectToPage("/Tickets/Order", new { id = latestOrder.Id });
     }
 }

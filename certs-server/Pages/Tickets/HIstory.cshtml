@@ -1,0 +1,54 @@
+@page "{id:guid}"
+@model HistoryModel
+
+@{
+    ViewData["Title"] = "History";
+}
+
+<h2 class="text-2xl">@ViewData["Title"]</h2>
+
+<div>
+    <table class="ds-table">
+        <thead>
+            <tr>
+                <td>Created Time</td>
+                <td>Order Url</td>
+                <td>Last Updated Time</td>
+                <td></td>
+                <td></td>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Orders.IsNullOrEmpty())
+            {
+                <tr>
+                    <td colspan="5">
+                        No Data
+                    </td>
+                </tr>
+            }
+            else
+            {
+                foreach (var t in Model.Orders)
+                {
+                    <tr>
+                        <td>@t.CreatedTime</td>
+                        <td>@t.OrderUrl</td>
+                        <td>@t.LastUpdatedTime</td>
+                        <td>@(t.Deleted ? "Deleted" : "")</td>
+                        <td>
+                            @if (t.Certificate is not null)
+                            {
+                                @* <form method="post" asp-page-handler="Download">
+                                    <input type="hidden" name="id" value="@t.Id" />
+                                    <button type="submit" class="ds-btn ds-btn-primary">Download (PFX)</button>
+                                </form> *@
+                                <a class="ds-btn ds-btn-primary" asp-page="/Tickets/Order" asp-route-id="@t.Id">Download</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

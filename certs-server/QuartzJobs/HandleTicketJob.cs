@@ -101,26 +101,45 @@ public class HandleTicketJob : IJob
 
             var certificateFactory = scope.ServiceProvider.GetRequiredService<AcmeCertificateFactory>();
             var account = await certificateFactory.GetOrCreateAccountAsync(context.CancellationToken);
-            var certReq = new CertsServer.Acme.CertificateRequest(ticketId, ticket.DomainNames);
 
-            OrderDetails order = await certificateFactory.GetOrCreateOrderAsync(certReq, ticketOrder?.OrderUrl, true, context.CancellationToken);
+            OrderDetails? order = null;
 
-            if (order.OrderUrl != ticketOrder?.OrderUrl)
+            if (string.IsNullOrWhiteSpace(ticketOrder?.OrderUrl) == false)
             {
-                var oldTicketOrder = ticketOrder;
-                if (oldTicketOrder is not null)
+                // try to load existing order
+                order = await certificateFactory.GetOrderAsync(ticketOrder.OrderUrl, order, context.CancellationToken);
+            }
+
+            // create ticket-order if not exists || expired || invalid
+            if (ticketOrder is null || ticketOrder.Expired() || order?.Payload?.Status == AcmeConst.InvalidStatus)
+            {
+                if(ticketOrder is not null)
                 {
-                    oldTicketOrder.Delete();
-                    _db.Update(oldTicketOrder);
+                    ticketOrder.Delete();
+                    _db.Update(ticketOrder);
                 }
-                ticketOrder = new TicketOrderEntity(order.OrderUrl, ticket.Id);
+
+                ticketOrder = new TicketOrderEntity(string.Empty, ticket.Id);
                 _db.Add(ticketOrder);
                 await _db.SaveChangesAsync(context.CancellationToken);
                 _logger.LogInformation("Created new order {TicketOrderId}:{OrderUrl}", ticketOrder.Id, ticketOrder.OrderUrl);
             }
-            else
+
+            // until here ticketOrder must not null
+            var certReq = new CertsServer.Acme.CertificateRequest(ticketOrder.Id, ticketId, ticket.DomainNames)
             {
-                _logger.LogInformation("Loaded existing order {OrderUrl}", ticketOrder.OrderUrl);
+                PfxPassword = ticket.PfxPassword,
+            };
+
+            // load or create
+            order = await certificateFactory.GetOrCreateOrderAsync(certReq, ticketOrder.OrderUrl, true, context.CancellationToken);
+            
+            if(ticketOrder.OrderUrl != order.OrderUrl)
+            {
+                ticketOrder.OrderUrl = order.OrderUrl;
+                ticketOrder.LastUpdatedTime = DateTimeOffset.UtcNow;
+                _logger.LogInformation("Updated order URL for ticket {TicketId} to {OrderUrl}", ticketId, order.OrderUrl);
+                await _db.SaveChangesAsync(context.CancellationToken);
             }
 
             certificate = await certificateFactory.CreateCertificateAsync(certReq, order, context.CancellationToken);
@@ -132,13 +151,17 @@ public class HandleTicketJob : IJob
                 return;
             }
 
+            // Reload
+            order = await certificateFactory.GetOrderAsync(ticketOrder.OrderUrl, order, context.CancellationToken);
             var path = await certificateStore.SaveAsync(certificate, context.CancellationToken);
-            var ticketCertificate = new TicketCertificateEntity(path, ticketOrder.Id, ticketId, TicketCertificateStatus.Active, certificate.NotBefore, certificate.NotAfter)
+
+            ticketOrder.Expires = DateTimeOffset.Parse(order.Payload.Expires);
+            ticketOrder.Certificate = new TicketCertificateEntity(path, ticketOrder.Id, ticketId, TicketCertificateStatus.Active, certificate.NotBefore, certificate.NotAfter)
             {
                 AcmeOrderUrl = order.OrderUrl
             };
-            ticket.Finished(ticketCertificate);
-            await _db.AddAsync(ticketCertificate);
+            ticket.Finished();
+
             await _db.SaveChangesAsync(context.CancellationToken);
         }
         catch (StateTerminatedException)

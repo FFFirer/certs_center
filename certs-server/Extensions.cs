@@ -43,7 +43,7 @@ public class HandleTicketStartupHostedService : BackgroundService
                 .WithIdentity(t.Id.ToString())
                 .WithSimpleSchedule(plan =>
                 {
-                    plan.WithInterval(TimeSpan.FromMinutes(5));
+                    plan.WithInterval(TimeSpan.FromHours(6));
                     plan.RepeatForever();
                 })
                 .UsingJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object>

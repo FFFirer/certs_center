@@ -51,11 +51,25 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient(CaConst.LetsEncrypt.Name, http =>
         {
             http.BaseAddress = new Uri(CaConst.LetsEncrypt.Endpoint);
-        });
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            Proxy = null,
+            UseProxy = false,
+            ServerCertificateCustomValidationCallback = (a, b, c, d) => true
+        })
+        ;
         services.AddHttpClient(CaConst.LetsEncryptStaging.Name, http =>
         {
             http.BaseAddress = new Uri(CaConst.LetsEncryptStaging.Endpoint);
-        });
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            Proxy = null,
+            UseProxy = false,
+            ServerCertificateCustomValidationCallback = (a, b, c, d) => true
+        })
+        ;
 
         return services;
     }

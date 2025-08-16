@@ -1,9 +1,12 @@
 using AgileConfig.Client;
 
+using CertsCenter.Acme;
+
 using CertsServer;
 using CertsServer.Acme;
 using CertsServer.Data;
 using CertsServer.QuartzJobs;
+using CertsServer.Services;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -24,6 +27,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration
     .AddUserSecrets<Program>()
     .AddEnvironmentVariables("CERTS_");
+
+DnsUtil.Configure(builder.Configuration);
 
 builder.Host.UseSerilog((ctx, sp, serilog) =>
 {
@@ -120,7 +125,8 @@ try
         .AddCertsServerHostedService();
 
     builder.Services
-        .AddAcmeDefaults();
+        .AddAcmeDefaults()
+        .AddScoped<TicketOrderExportService>();
 
     var db = builder.Configuration.GetValue("Db", "sqlite");
 
