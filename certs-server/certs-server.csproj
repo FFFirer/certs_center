@@ -34,6 +34,10 @@
     <PackageReference Include="Vite.AspNetCore" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <EnablePublishBuildAssets Condition=" '$(Configuration)' == 'Release' AND '$(EnablePublishBuildAssets)' == ''">true</EnablePublishBuildAssets>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\acme\acme.csproj" />
   </ItemGroup>
@@ -48,7 +52,8 @@
     <!-- <Content Include="wwwroot\dist\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content> -->
-    <Content Include="wwwroot\dist\.vite\**" />
+    <!-- <Content Include="wwwroot\dist\.vite\**" /> -->
+    <Content Remove="wwwroot\dist\**\*" />
   </ItemGroup>
 
   <ItemGroup>
@@ -56,22 +61,24 @@
   </ItemGroup>
 
   <!-- Ensure Node environment on Build -->
-  <Target Name="DebugEnsureNodeEnv" BeforeTargets="Build;PublishBuildAssets" Condition=" !Exists('Assets\node_modules') ">
+  <Target Name="DebugEnsureNodeEnv" BeforeTargets="Build;PublishBuildAssets"
+    Condition=" !Exists('node_modules') ">
     <!-- Ensure Node.js is installed -->
     <Exec Command="node --version" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="ErrorCode" />
     </Exec>
-    <Error Condition="'$(ErrorCode)' != '0'" Text="Node.js is required to build and run this project. To continue, please install Node.js from https://nodejs.org/, and then restart your command prompt or IDE." />
-    <Message Importance="high" Text="Restoring dependencies using 'npm'. This may take several minutes..." />
+    <Error Condition="'$(ErrorCode)' != '0'"
+      Text="Node.js is required to build and run this project. To continue, please install Node.js from https://nodejs.org/, and then restart your command prompt or IDE." />
+    <Message Importance="high"
+      Text="Restoring dependencies using 'npm'. This may take several minutes..." />
     <!-- Install Node packages -->
     <Exec Command="pnpm install" />
   </Target>
 
   <!-- Build the final assets -->
-  <Target Name="PublishBuildAssets" BeforeTargets="Rebuild;Build;ResolveProjectStaticWebAssets" Condition=" '$(Configuration)' == 'Release' ">
-    <ItemGroup>
-      <Content Remove="wwwroot\dist\**\*" />
-    </ItemGroup>
+  <Target Name="PublishBuildAssets" BeforeTargets="Rebuild;Build;ResolveProjectStaticWebAssets"
+    Condition=" '$(EnablePublishBuildAssets)' == 'true' ">
+
     <!-- Build the final assets -->
     <Exec Command="pnpm run build" />
     <ItemGroup>
