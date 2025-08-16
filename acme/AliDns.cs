@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 
+using AlibabaCloud.TeaUtil.Models;
+
 using CertsCenter.Acme;
 
 using Microsoft.Extensions.Configuration;
@@ -23,6 +25,7 @@ public static class AlibabaCloudServiceCollectionExtensions
     public static IServiceCollection AddAlibabaCloud(this IServiceCollection services)
     {
         services.ConfigureOptionsFromConfiguration<AlibabaCloud.OpenApiClient.Models.Config>("AlibabaCloud");
+        services.ConfigureOptionsFromConfiguration<RuntimeOptions>("AlibabaCloud:RuntimeOptions");
 
         services.AddScoped<AlibabaCloud.SDK.Alidns20150109.Client>(sp =>
         {
@@ -44,10 +47,15 @@ public class AliDnsChallengeProvider : IDnsChallengeProvider
 {
     private readonly ILogger<AliDnsChallengeProvider> _logger;
     private readonly AlibabaCloud.SDK.Alidns20150109.Client _client;
+    private readonly IOptions<RuntimeOptions> _runtimeOptions;
 
-    public AliDnsChallengeProvider(ILogger<AliDnsChallengeProvider> logger, AlibabaCloud.SDK.Alidns20150109.Client client)
+    public AliDnsChallengeProvider(
+        ILogger<AliDnsChallengeProvider> logger, 
+        IOptions<RuntimeOptions> runtimeOptions,
+        AlibabaCloud.SDK.Alidns20150109.Client client)
     {
         _logger = logger;
+        _runtimeOptions = runtimeOptions;
         _client = client;
     }
 
@@ -61,13 +69,13 @@ public class AliDnsChallengeProvider : IDnsChallengeProvider
         {
             _logger.LogDebug("[AliDns] Dns01 Challenge: {DomainName}. RootDomain:{domain}, Record value:{rr}", acmeDomain, rootDomainName, rr);
 
-            var resp = await _client.AddDomainRecordAsync(new AlibabaCloud.SDK.Alidns20150109.Models.AddDomainRecordRequest
+            var resp = await _client.AddDomainRecordWithOptionsAsync(new AlibabaCloud.SDK.Alidns20150109.Models.AddDomainRecordRequest
             {
                 DomainName = rootDomainName,
                 RR = rr,
                 Type = "TXT",
                 Value = txtRecord
-            });
+            }, _runtimeOptions.Value);
 
             if (resp.StatusCode != 200)
             {
@@ -85,11 +93,11 @@ public class AliDnsChallengeProvider : IDnsChallengeProvider
     {
         try
         {
-            var exists = await _client.DescribeDomainRecordsAsync(new()
+            var exists = await _client.DescribeDomainRecordsWithOptionsAsync(new()
             {
                 DomainName = rootDomainName,
                 Type = "TXT"
-            });
+            }, _runtimeOptions.Value);
 
             var same = exists.Body.DomainRecords.Record.FirstOrDefault(x => x.Type == "TXT" && x.RR == rr && x.Value == txtRecord);
 
@@ -111,10 +119,10 @@ public class AliDnsChallengeProvider : IDnsChallengeProvider
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var resp = await _client.DeleteDomainRecordAsync(new AlibabaCloud.SDK.Alidns20150109.Models.DeleteDomainRecordRequest
+        var resp = await _client.DeleteDomainRecordWithOptionsAsync(new AlibabaCloud.SDK.Alidns20150109.Models.DeleteDomainRecordRequest
         {
             RecordId = context.Key,
-        });
+        }, _runtimeOptions.Value);
 
         _logger.LogDebug("Delete domain record result: {@Response}", resp);
     }
