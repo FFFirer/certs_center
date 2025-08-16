@@ -35,8 +35,6 @@ public class AcmeClientFactory : IDisposable
         _store = store;
     }
 
-    private AcmeProtocolClient? _client;
-
     public async ValueTask<AcmeProtocolClient> Create(bool refresh = false, CancellationToken cancellationToken = default)
     {
         if (_disposed)
