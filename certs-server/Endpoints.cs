@@ -3,10 +3,6 @@ using CertsServer.Data;
 using CertsServer.QuartzJobs;
 using CertsServer.Services;
 
-using LettuceEncrypt;
-
-using McMaster.AspNetCore.Kestrel.Certificates;
-
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
