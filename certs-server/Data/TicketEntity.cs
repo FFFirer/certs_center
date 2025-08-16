@@ -188,6 +188,7 @@ public class SqliteTicketOrderEntityConfiguration : IEntityTypeConfiguration<Tic
 
         builder.Property(x => x.CreatedTime).HasConversion(SqliteDateTimeOffsetValueConverter.Instance);
         builder.Property(x => x.LastUpdatedTime).HasConversion(SqliteDateTimeOffsetValueConverter.Instance);
+        builder.Property(x => x.Expires).HasConversion(SqliteDateTimeOffsetValueConverter.Instance);
 
         builder.OwnsOne(x => x.Certificate, o => o.ToJson());
     }
