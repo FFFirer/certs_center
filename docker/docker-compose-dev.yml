@@ -30,9 +30,14 @@ services:
     volumes: *certs-volumes
     environment: 
       <<: *environment-variables
+      CERTS_Serilog__WriteTo__0__Args__outputTemplete: '{Level:u3} {Timestamp:HH:mm:ss} {Message:lj}{NewLine}{Exception}'
+      CERTS_Acme__Email__0: use@your.email
+      CERTS_Acme__AcceptTermOfService: true
+      CERTS_AlibabaCloud__AccessKeyId: youraccesskeyid
+      CERTS_AlibabaCloud__AccessKeySecret: youraccesskeysecret
+      CERTS_AlibebeCloud__Address: alidns.cn-hangzhou.aliyuncs.com
     depends_on:
       migrations:
         condition: service_completed_successfully
     restart: on-failure:3
-    ports:
-      - 8765:8080
+    network_mode: host

@@ -49,9 +49,13 @@ COPY ["./certs-server", "./certs-server/"]
 # COPY ["./cli", "./cli/"]
 # COPY ["./eventbus", "./eventbus/"]
 # COPY ["./sqlite-migrations", "./sqlite-migrations/"]
-COPY --from=node-build ["/src/wwwroot/dist/.vite", "/src/wwwroot/dist/assets", "/src/wwwroot/dist/", "./certs-server/wwwroot/"]
 
 RUN rm -rf "/src/certs-server/wwwroot/dist"
+COPY --from=node-build "/src/wwwroot/dist" "/src/certs-server/wwwroot/dist"
+
+# RUN ls /src/certs-server/wwwroot/dist -la
+# RUN ls /src/certs-server/wwwroot/dist/.vite -la
+# RUN ls /src/certs-server/wwwroot/dist/assets -la
 
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages dotnet build "./certs-server/certs-server.csproj" /p:EnablePublishBuildAssets=false
 
@@ -62,5 +66,9 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages dotnet publish "./c
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# RUN ls /app/wwwroot/dist -la
+# RUN ls /app/wwwroot/dist/.vite -la
+# RUN ls /app/wwwroot/dist/assets -la
 
 ENTRYPOINT ["dotnet", "certs-server.dll"]

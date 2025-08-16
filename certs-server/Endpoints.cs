@@ -1,7 +1,13 @@
 ﻿using CertsServer.Acme;
 using CertsServer.Data;
+using CertsServer.Events;
 using CertsServer.QuartzJobs;
 using CertsServer.Services;
+
+using FluentValidation;
+using FluentValidation.Results;
+
+using MediatR;
 
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -25,6 +31,7 @@ public static class Endpoints
     {
         var apis = endpoints.MapGroup("/api");
 
+        apis.MapPost("/ticket", TicketHttpHandlers.CreateTicket);
         apis.MapGet("/ticket/all", TicketHttpHandlers.ListAll);
         apis.MapGet("/ticket/{id:guid}", TicketHttpHandlers.Get);
         apis.MapGet("/ticket/{id:guid}/plan", TicketHttpHandlers.GetPlanInfo);
@@ -79,8 +86,47 @@ public static class Endpoints
 public record TicketDto(Guid Id, DateTimeOffset CreatedTime, TicketStatus Status, string? Remark, string[]? Domains);
 public record CertificateDto(Guid Id, string Path, TicketCertificateStatus Status, DateTime? NotBefore, DateTime? NotAfter, DateTimeOffset CreatedTime);
 
+public record CreateTicketRequest(Guid Id, string[] Domains, string? PfxPassword);
+public class CreateTicketRequestValidator : AbstractValidator<CreateTicketRequest>
+{
+    public CreateTicketRequestValidator() : base()
+    {
+        RuleFor(x => x.Id).NotEmpty().WithMessage("Id must be not empty");
+        RuleFor(x => x.Domains).NotEmpty().WithMessage("Domains must greater then 0");
+    }
+}
+
 public static class TicketHttpHandlers
 {
+    public static CreateTicketRequestValidator Validator_CreateTicketRequest = new CreateTicketRequestValidator();
+
+    [OpenApiOperation("Ticket_Create", "创建Ticket", "")]
+    public static async Task<Results<Ok<Guid>, BadRequest<List<ValidationFailure>>>> CreateTicket(
+        [FromBody] CreateTicketRequest request,
+        [FromServices] CertsServerDbContext db,
+        [FromServices] IPublisher publisher,
+        CancellationToken cancellationToken)
+    {
+        var validation = Validator_CreateTicketRequest.Validate(request);
+        if (validation.IsValid == false)
+        {
+            return TypedResults.BadRequest(validation.Errors);
+        }
+
+        var ticket = new TicketEntity(request.Id)
+        {
+            DomainNames = request.Domains,
+            PfxPassword = request.PfxPassword,
+            Status = TicketStatus.Created
+        };
+
+        await db.AddAsync(ticket, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await publisher.Publish(new TicketCreated(ticket.Id));
+
+        return TypedResults.Ok(ticket.Id);
+    }
+
     [OpenApiOperation("Ticket_All", "获取所有Ticket", "")]
     public static async Task<List<TicketDto>> ListAll(
         [FromServices] CertsServerDbContext db,

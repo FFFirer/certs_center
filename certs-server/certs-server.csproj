@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="AgileConfig.Client" />
     <PackageReference Include="AlibabaCloud.SDK.Alidns20150109" />
+    <PackageReference Include="FluentValidation" />
     <PackageReference Include="LettuceEncrypt" />
     <PackageReference Include="Mapster" />
     <PackageReference Include="MediatR" />
@@ -34,7 +35,8 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <EnablePublishBuildAssets Condition=" '$(Configuration)' == 'Release' AND '$(EnablePublishBuildAssets)' == ''">true</EnablePublishBuildAssets>
+    <EnablePublishBuildAssets
+      Condition=" '$(Configuration)' == 'Release' AND '$(EnablePublishBuildAssets)' == ''">true</EnablePublishBuildAssets>
   </PropertyGroup>
 
   <ItemGroup>
@@ -51,8 +53,7 @@
     <!-- <Content Include="wwwroot\dist\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content> -->
-    <!-- <Content Include="wwwroot\dist\.vite\**" /> -->
-    <Content Remove="wwwroot\dist\**\*" />
+    <Content Include="wwwroot\dist\.vite\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -75,10 +76,13 @@
   </Target>
 
   <!-- Build the final assets -->
-  <Target Name="PublishBuildAssets" BeforeTargets="Rebuild;Build;ResolveProjectStaticWebAssets"
-    Condition=" '$(EnablePublishBuildAssets)' == 'true' ">
-
-    <!-- Build the final assets -->
+  <Target Name="PublishBuildAssets"
+    Condition=" '$(EnablePublishBuildAssets)' == 'true' "
+    BeforeTargets="Rebuild;Build;ResolveProjectStaticWebAssets">
+    <ItemGroup>
+      <Content Remove="wwwroot\dist\**\*" />
+    </ItemGroup>
+    <!-- Build the final assets when enable flag -->
     <Exec Command="pnpm run build" />
     <ItemGroup>
       <Content Include="wwwroot\dist\**\*">

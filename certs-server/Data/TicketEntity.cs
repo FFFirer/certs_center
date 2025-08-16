@@ -21,9 +21,14 @@ public enum TicketStatus
 
 public class TicketEntity
 {
-    public TicketEntity()
+    public TicketEntity() : this(Guid.NewGuid())
     {
-        Id = Guid.NewGuid();
+
+    }
+
+    public TicketEntity(Guid id)
+    {
+        Id = id;
         CreatedTime = DateTimeOffset.Now;
     }
 
