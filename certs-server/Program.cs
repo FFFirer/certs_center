@@ -129,25 +129,28 @@ try
         .AddScoped<TicketOrderExportService>();
 
     var db = builder.Configuration.GetValue("Db", "sqlite");
+    var connectionString = builder.Configuration.GetCertsServerConnectionString();
 
     switch (db)
     {
         case "postgres":
             // builder.Services.AddSqliteModelCreating<CertsServerDbContext>();
             builder.Services.AddDbContext<CertsServerDbContext>(
-                options => options.UseNpgsql(builder.Configuration.GetConnectionString("Default"))
+                options => options.UseNpgsql(connectionString)
             );
             break;
         default:
             builder.Services.AddSqliteModelCreating<CertsServerDbContext>();
+
             builder.Services.AddDbContext<CertsServerDbContext>(
-                options => options.UseSqlite(builder.Configuration.GetConnectionString("Default"))
+                options => options.UseSqlite(connectionString)
             );
             break;
     }
 
     var app = builder.Build();
 
+    app.Logger.LogInformation("Using ConnectionString: {Value}", connectionString);
     app.UseSerilogRequestLogging();
 
     if (app.Environment.IsDevelopment() || app.Configuration.GetValue("EnableSwagger", false) == true)

@@ -1,0 +1,33 @@
+x-environment-variables: &environment-variables
+  - CERTS_ConnectionStrings_Default=Data Source=/app/data/certs.db
+  - CERTS_AcmeStore_Directory=/app/data/acme_store
+x-certs-volumes: &certs-volumes
+  - certs-data:/app/data
+
+name: certs_center
+
+volumes:
+  certs-data:
+    name: certs-data
+
+services:
+  migrations:
+    container_name: migrations
+    image: localhost/certs_cli:latest
+    volumes: *certs-volumes
+    environment: *environment-variables
+    entrypoint: ["dotnet", "cli.dll", "database", "update"]
+    restart: on-failure:3
+  web:
+    container_name: certs_web
+    image: localhost/certs_center:latest
+    volumes: *certs-volumes
+    environment: 
+      - <<* *environment-variables
+      - ASPNETCORE_URLS=http://+
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    restart: on-failure:3
+    ports:
+      - 8765:80

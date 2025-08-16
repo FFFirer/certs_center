@@ -1,0 +1,38 @@
+x-environment-variables: &environment-variables
+  CERTS_ConnectionStrings__Default: Data Source=/app/data/certs.db
+  CERTS_AcmeStore__Directory: /app/data/acme_store
+x-certs-volumes: &certs-volumes
+  - certs-data:/app/data
+
+name: certs_center_dev
+
+volumes:
+  certs-data:
+    name: certs-data-dev
+
+services:
+  migrations:
+    container_name: migrations
+    build:
+      context: ..
+      dockerfile: Dockerfile.cli
+    volumes: *certs-volumes
+    environment: 
+      <<: *environment-variables
+    # entrypoint: ["dotnet", "cli.dll"]
+    command: ["database", "update"]
+    restart: on-failure:3
+  web:
+    container_name: certs_web
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    volumes: *certs-volumes
+    environment: 
+      <<: *environment-variables
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    restart: on-failure:3
+    ports:
+      - 8765:8080

@@ -29,10 +29,4 @@ public static class ConfigurationBuilderExtensions
             .AddEnvironmentVariables("CERTS_")
             .AddUserSecrets("5be23d08-54c4-488c-acff-cca75c11ef03");
     }
-
-    public static string GetCertsServerConnectionString(this IConfiguration configuration)
-    {
-        var name = configuration.GetValue("DefaultConnectionName", defaultValue: "Default");
-        return configuration.GetValue($"ConnectionStrings:{name}", string.Empty);
-    }
 }

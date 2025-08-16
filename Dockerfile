@@ -33,31 +33,31 @@ ARG BUILD_CONFIGURATION=${BUILD_CONFIGURATION:-Release}
 
 COPY ["./acme/acme.csproj", "/src/acme/"]
 COPY ["./certs-server/certs-server.csproj", "/src/certs-server/"]
-COPY ["./cli/cli.csproj", "/src/cli/"]
-COPY ["./sqlite-migrations/sqlite-migrations.csproj", "/src/sqlite-migrations/"]
+# COPY ["./cli/cli.csproj", "/src/cli/"]
+# COPY ["./sqlite-migrations/sqlite-migrations.csproj", "/src/sqlite-migrations/"]
 COPY ["./Directory.Packages.props", "/src/"]
 COPY ["./Directory.Build.props", "/src/"]
 COPY ["./nuget.config", "/src/"]
 
 WORKDIR /src
-RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages dotnet restore "./cli/cli.csproj"
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages dotnet restore "./certs-server/certs-server.csproj"
 
 FROM dotnet-restore AS dotnet-build
 
 COPY ["./acme", "./acme/"]
 COPY ["./certs-server", "./certs-server/"]
-COPY ["./cli", "./cli/"]
+# COPY ["./cli", "./cli/"]
 # COPY ["./eventbus", "./eventbus/"]
-COPY ["./sqlite-migrations", "./sqlite-migrations/"]
+# COPY ["./sqlite-migrations", "./sqlite-migrations/"]
 COPY --from=node-build ["/src/wwwroot/dist/.vite", "/src/wwwroot/dist/assets", "/src/wwwroot/dist/", "./certs-server/wwwroot/"]
 
 RUN rm -rf "/src/certs-server/wwwroot/dist"
 
-RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages dotnet build "./cli/cli.csproj" /p:EnablePublishBuildAssets=false
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages dotnet build "./certs-server/certs-server.csproj" /p:EnablePublishBuildAssets=false
 
 FROM dotnet-build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages dotnet publish "./cli/cli.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false /p:EnablePublishBuildAssets=false
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages dotnet publish "./certs-server/certs-server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false /p:EnablePublishBuildAssets=false
 
 FROM base AS final
 WORKDIR /app

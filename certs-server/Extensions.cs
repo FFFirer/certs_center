@@ -88,4 +88,11 @@ public static class Extensions
 
         return services;
     }
+
+    public static string GetCertsServerConnectionString(this IConfiguration configuration)
+    {
+        var name = configuration.GetValue("DefaultConnectionName", defaultValue: "Default");
+        // return configuration.GetValue($"ConnectionStrings:{name}", string.Empty);
+        return configuration.GetConnectionString(name) ?? string.Empty;
+    }
 }

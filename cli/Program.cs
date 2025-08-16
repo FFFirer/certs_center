@@ -9,5 +9,6 @@ try
 catch(Exception ex)
 {
     Console.WriteLine(ex.Message);
-    return 1;
+    throw;
+    // return 1;
 }

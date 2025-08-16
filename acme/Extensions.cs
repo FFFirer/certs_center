@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AcmeCertificateFactory>();
 
         services.ConfigureOptionsFromConfiguration<AcmeOptions>("Acme");
+        services.ConfigureOptionsFromConfiguration<FileSystemAcmeStoreOptions>("AcmeStore");
 
         services.AddSingleton<IAcmeStore, FileSystemAcmeStore>();
         services.AddSingleton<ICertificateStore, X509StoreCertificateStore>();
