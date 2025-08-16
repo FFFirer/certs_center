@@ -37,6 +37,7 @@ services:
       CERTS_AlibabaCloud__AccessKeySecret: youraccesskeysecret
       CERTS_AlibebeCloud__Address: alidns.cn-hangzhou.aliyuncs.com
       CERTS_EnableSwagger: true
+      ASPNETCORE_ENVIRONMENT: Development
     depends_on:
       migrations:
         condition: service_completed_successfully
