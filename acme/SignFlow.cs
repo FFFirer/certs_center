@@ -319,9 +319,12 @@ public class AcmeCertificateFactory
         var keyPair = CreateKeyPair(request.KeyAlgor, request.KeySize);
         var certCsr = CreateCertCsr(request.Domains, keyPair);
 
-        order = await acme.FinalizeOrderAsync(order.Payload.Finalize, certCsr, cancellationToken);
+        if (order.Payload.Status != AcmeConst.ValidStatus)
+        {
+            order = await acme.FinalizeOrderAsync(order.Payload.Finalize, certCsr, cancellationToken);
 
-        _logger.LogInformation("Finalizing order {Url}", order.OrderUrl);
+            _logger.LogInformation("Finalizing order {Url}", order.OrderUrl);
+        }
 
         var testUtil = DateTime.Now.Add(TimeSpan.FromMinutes(10));
 
@@ -753,7 +756,7 @@ public class AcmeCertificateFactory
     {
         var acme = await _clientFactory.Create(cancellationToken: cancellationToken);
         var order = await acme.GetOrderDetailsAsync(orderUrl, existsing, cancellationToken);
-     
+
         return order;
     }
 }

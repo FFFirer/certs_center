@@ -90,9 +90,7 @@ public class HandleTicketJob : IJob
                 if (certificate is not null && NotExpired(certificate))
                 {
                     _logger.LogInformation("Certificate for ticket '{Id}' is valid before {NotAfter}.", ticketId, DateTimeExtensions.ConvertToUtc(certificate.NotAfter));
-
                     ticket.Finished();
-
                     return;
                 }
             }
