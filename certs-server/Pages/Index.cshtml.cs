@@ -48,6 +48,11 @@ public class IndexModel : PageModel
         if (ticket != null)
         {
             ticket.Status = Data.TicketStatus.Deleted;
+
+            await _db.TicketOrders
+               .Where(x => x.TicketId == ticket.Id)
+               .ExecuteUpdateAsync(x => x.SetProperty(x => x.Deleted, true), this.HttpContext.RequestAborted);
+
             await _db.SaveChangesAsync(this.HttpContext.RequestAborted);
 
             await _publisher.Publish(new TicketDeleted(ticket.Id));

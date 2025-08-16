@@ -2,6 +2,7 @@ using System;
 using System.Security.Cryptography.X509Certificates;
 
 using ACMESharp.Protocol;
+using ACMESharp.Protocol.Resources;
 
 using CertsServer.Acme;
 using CertsServer.Data;
@@ -170,7 +171,10 @@ public class HandleTicketJob : IJob
         }
         catch (System.Exception ex)
         {
-            _logger.LogError(ex, "Unhandled error");
+            ticket.Failed(ex.Message);
+            await _db.SaveChangesAsync(context.CancellationToken);
+
+            _logger.LogError(ex, "Ticket order {id} failed", ticketOrder?.Id);
         }
     }
 
