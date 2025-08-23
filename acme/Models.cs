@@ -42,5 +42,5 @@ public class CertificateRequest(long id, Guid orderId, string[] domains)
     public string? PfxPassword { get; set; }
 
     public int? KeySize { get; set; }
-    public string KeyAlgor { get; set; } = AcmeConst.EcKeyType;
+    public string KeyAlgor { get; set; } = AcmeConst.RsaKeyType;
 }

@@ -23,7 +23,7 @@ public class TicketOrderExportService
         _clientFactory = clientFactory;
     }
 
-    public async Task<byte[]?> GetPem(Guid ticketId, long orderId, CancellationToken cancellationToken)
+    public async Task<byte[]?> GetCert(Guid ticketId, long orderId, CancellationToken cancellationToken)
     {
         var ticket = await _db.Tickets.FindAsync([ticketId], cancellationToken);
         var ticketOrder = await _db.TicketOrders.FindAsync([orderId], cancellationToken);
@@ -33,10 +33,10 @@ public class TicketOrderExportService
             return null;
         }
 
-        return await GetPem(ticket, ticketOrder, cancellationToken);
+        return await GetCert(ticket, ticketOrder, cancellationToken);
     }
 
-    private async Task<byte[]> GetPem(TicketEntity ticket, TicketOrderEntity ticketOrder, CancellationToken cancellationToken)
+    private async Task<byte[]> GetCert(TicketEntity ticket, TicketOrderEntity ticketOrder, CancellationToken cancellationToken)
     {
         var fileBytes = await _store.LoadRawAsync<byte[]>(AcmeStoreKeys.AcmeOrderCert, cancellationToken, ticketOrder.Id);
         if (fileBytes is null)
@@ -71,8 +71,8 @@ public class TicketOrderExportService
             }
             
             var keyPair = AcmeCertificateFactory.Base64ToPkiKeyPair(certKey);
-            var pemBytes = await GetPem(ticket, ticketOrder, cancellationToken);
-            using var cert = X509CertificateLoader.LoadCertificate(pemBytes);
+            var certBytes = await GetCert(ticket, ticketOrder, cancellationToken);
+            using var cert = X509CertificateLoader.LoadCertificate(certBytes);
             var pkiCert = PkiCertificate.From(cert);
             var pfx = pkiCert.Export(PkiArchiveFormat.Pkcs12,
                 privateKey: keyPair.PrivateKey,

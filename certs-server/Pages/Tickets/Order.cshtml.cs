@@ -37,7 +37,7 @@ public class TicketOrderModel : PageModel
         var bytes = type switch
         {
             "pfx" => await _export.GetPfx(ticketOrder.TicketId, ticketOrder.Id, this.HttpContext.RequestAborted),
-            "pem" => await _export.GetPem(ticketOrder.TicketId, ticketOrder.Id, this.HttpContext.RequestAborted),
+            "crt" => await _export.GetCert(ticketOrder.TicketId, ticketOrder.Id, this.HttpContext.RequestAborted),
             _ => throw new NotSupportedException($"Not supported export type: {type}")
         };
 
@@ -49,7 +49,7 @@ public class TicketOrderModel : PageModel
         var fileExt = type switch
         {
             "pfx" => ".pfx",
-            "pem" => ".pem",
+            "crt" => ".crt",
             _ => ""
         };
 
@@ -65,7 +65,7 @@ public class TicketOrderModel : PageModel
             return NotFound();
         }
 
-        var fileBytes = await _export.GetPem(ticketOrder.TicketId, ticketOrder.Id, this.HttpContext.RequestAborted);
+        var fileBytes = await _export.GetCert(ticketOrder.TicketId, ticketOrder.Id, this.HttpContext.RequestAborted);
 
         if (fileBytes is null)
         {

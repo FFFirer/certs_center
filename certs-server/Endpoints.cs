@@ -157,7 +157,7 @@ public static class TicketHttpHandlers
         var bytes = type switch
         {
             "pfx" => await exportService.GetPfx(ticketOrder.TicketId, ticketOrder.Id, cancellationToken),
-            "pem" => await exportService.GetPem(ticketOrder.TicketId, ticketOrder.Id, cancellationToken),
+            "crt" => await exportService.GetCert(ticketOrder.TicketId, ticketOrder.Id, cancellationToken),
             _ => throw new NotSupportedException($"Not supported export type: {type}")
         };
 
@@ -169,7 +169,7 @@ public static class TicketHttpHandlers
         var fileExt = type switch
         {
             "pfx" => ".pfx",
-            "pem" => ".pem",
+            "crt" => ".crt",
             _ => ""
         };
 

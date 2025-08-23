@@ -127,7 +127,7 @@ public class HandleTicketJob : IJob
             // until here ticketOrder must not null
             var certReq = new CertsServer.Acme.CertificateRequest(ticketOrder.Id, ticketId, ticket.DomainNames)
             {
-                PfxPassword = ticket.PfxPassword,
+                PfxPassword = ticket.PfxPassword
             };
 
             // load or create
